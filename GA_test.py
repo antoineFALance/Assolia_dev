@@ -1,33 +1,39 @@
 import numpy
 from itertools import combinations
 
-def generateIndividual(nbCulture,nbParcelle,numMinPaille,numMinEnsillage,surface,etaPaille,etaEnsillage):
-    # matrix = numpy.zeros((nbParcelle, nbCulture))
-    # matrix_1 = numpy.zeros((nbParcelle,nbCulture))
-    #
-    # for i in range(nbParcelle):
-    #     matrix_1[i][numpy.random.random_integers(0,4)]=1
-    #
-    # for i in range(numpy.random.random_integers(0,20)):
-    #     matrix=numpy.random.permutation(matrix_1)
-    #     matrix_1=matrix
-    #
-    # return matrix
+def generateIndividual(nbCulture,nbParcelle,numMinPaille,numMinEnsillage,surface,eta,lambdaPaille,lambdaEnsilage,R1,MPTS,MPCn1,R2):
 
     count=0
     while True:
         matrix=numpy.zeros((nbParcelle,nbCulture))
-        matrix_1 = numpy.zeros((nbParcelle,nbCulture))
+        #matrix1 = numpy.zeros((nbParcelle,nbCulture))
 
         for i in range(nbParcelle):
-            matrix_1[i][numpy.random.random_integers(0,4)]=1
+            matrix[i][numpy.random.random_integers(0,4)]=1
 
-        for i in range(numpy.random.random_integers(0,20)):
-            matrix=numpy.random.permutation(matrix_1)
-            matrix_1=matrix
+        # for i in range(numpy.random.random_integers(0,50)):
+        #     matrix=numpy.random.permutation(matrix1)
+        #     matrix1=matrix
 
-        qtePaille = surface * numpy.matmul(matrix, etaPaille)
-        qteEnsillage = surface * numpy.matmul(matrix, etaEnsillage)
+        v = numpy.zeros(nbParcelle)
+
+        for i in range(len(matrix)):
+            v = v + numpy.matmul(numpy.matmul(matrix[i], R1), numpy.transpose(MPTS[i])) * numpy.identity(nbParcelle)[i]
+
+        eta2 = (numpy.ones(nbParcelle) - v / 100)
+
+        u = numpy.zeros(nbParcelle)
+        for i in range(nbParcelle):
+            u = u + numpy.matmul(numpy.matmul(R2, matrix[i]), MPCn1[i]) * numpy.identity(6)[i]
+
+        eta3 = (u / 100)
+
+        etaPaille=numpy.matmul(numpy.matmul(matrix, lambdaPaille),eta)
+
+        etaEnsillage =numpy.matmul(numpy.matmul(matrix, lambdaEnsilage),eta)
+
+        qtePaille = 0.8*surface * etaPaille*eta2*eta3
+        qteEnsillage = 1.5*surface * etaEnsillage*eta2*eta3
 
 
         if sum(qtePaille) >= numMinPaille and sum(qteEnsillage) >= numMinEnsillage:
@@ -39,7 +45,38 @@ def generateIndividual(nbCulture,nbParcelle,numMinPaille,numMinEnsillage,surface
 
 
 
-def cal_pop_fitness(MPC,MPCn1,MPTS,R1,R2,eta,etaPaille,etaEnsillage,surface,prixVenteCulture,coutProdCulture,nbParcelle,numMinPaille,numMinEnsillage):
+def cal_pop_fitness(MPC,MPCn1,MPTS,R1,R2,eta,lambdaPaille,lambdaEnsillage,surface,prixVenteCulture,coutProdCulture,nbParcelle,numMinPaille,numMinEnsillage):
+
+    eta1 = numpy.matmul(MPC, eta)
+    v = numpy.zeros(nbParcelle)
+
+    for i in range(len(MPC)):
+        v = v + numpy.matmul(numpy.matmul(MPC[i], R1), numpy.transpose(MPTS[i])) * numpy.identity(nbParcelle)[i]
+
+    eta2 = (numpy.ones(nbParcelle) - v / 100)
+
+    u = numpy.zeros(nbParcelle)
+    for i in range(nbParcelle):
+        u = u+numpy.matmul(numpy.matmul(R2,MPC[i]),MPCn1[i])*numpy.identity(6)[i]
+
+    eta3 = (u / 100)
+
+    etaPaille = numpy.matmul(numpy.matmul(MPC, lambdaPaille), eta)
+    etaEnsillage = numpy.matmul(numpy.matmul(MPC, lambdaEnsillage), eta)
+
+
+    # Calcul MB
+    #marBruteParcelle = (surface * (eta1 * eta2 * eta3 * numpy.matmul(MPC, prixVenteCulture) - numpy.matmul(MPC, coutProdCulture)))
+    marBruteParcelle=  surface * eta3 * (eta1 * eta2 * numpy.matmul(MPC, prixVenteCulture) - numpy.matmul(MPC, coutProdCulture))
+    qtePaille = 0.8*surface * etaPaille*eta2*eta3
+    qteEnsillage =1.5* surface*etaEnsillage*eta2*eta3
+    if sum(qteEnsillage)<numMinEnsillage or sum(qtePaille)<numMinPaille:
+         fitness=0
+    else:
+         fitness = sum(marBruteParcelle)
+    return fitness
+
+def margeBruteParcelle(MPC,MPCn1,MPTS,R1,R2,eta,surface,prixVenteCulture,coutProdCulture,nbParcelle):
 
     eta1 = numpy.matmul(MPC, eta)
     v = numpy.zeros(nbParcelle)
@@ -56,14 +93,9 @@ def cal_pop_fitness(MPC,MPCn1,MPTS,R1,R2,eta,etaPaille,etaEnsillage,surface,prix
     eta3 = (u / 100)
 
     # Calcul MB
-    marBruteParcelle = (surface * (eta1 * eta2 * eta3 * numpy.matmul(MPC, prixVenteCulture) - numpy.matmul(MPC, coutProdCulture)))
-    qtePaille = surface * numpy.matmul(MPC,etaPaille)
-    qteEnsillage = surface*numpy.matmul(MPC,etaEnsillage)
-    if sum(qteEnsillage)<numMinEnsillage or sum(qtePaille)<numMinPaille:
-         fitness=0
-    else:
-         fitness = sum(marBruteParcelle)
-    return fitness
+    #marBruteParcelle = (surface * (eta1 * eta2 * eta3 * numpy.matmul(MPC, prixVenteCulture) - numpy.matmul(MPC, coutProdCulture)))
+    marBruteParcelle=  surface * eta3 * (eta1 * eta2 * numpy.matmul(MPC, prixVenteCulture) - numpy.matmul(MPC, coutProdCulture))
+    return marBruteParcelle
 
 
 
@@ -71,10 +103,13 @@ def selectElite(pop,fitness):
     parentValue=sorted(fitness,reverse=True)[0:1]
     indexParent=[]
     for parent in parentValue:
-        indexParent.append(fitness.index(parent))
+         indexParent.append(fitness.index(parent))
+    #map(lambda parent:indexParent.append(fitness.index(parent)),parentValue)
+
     parents=[]
     for index in indexParent:
-        parents.append(pop[index])
+         parents.append(pop[index])
+    #map(lambda index:parents.append(pop[index]),indexParent)
     return [parents,parentValue]
 
 def select_mating_pool(pop, fitness, num_parents):
@@ -116,7 +151,7 @@ def select_mating_pool(pop, fitness, num_parents):
 
 
 
-def crossover(parentList, offspring_size,nbParcelle,nbCulture,surface,numMinEnsillage,numMinPaille,etaPaille,etaEnsillage):
+def crossover(parentList, offspring_size,nbParcelle,nbCulture,surface,numMinEnsillage,numMinPaille,lambdaPaille,lambdaEnsillage,eta,R1,R2,MPTS,MPCn1):
 
     selectedBreederList=parentList
     parentCombination =[]
@@ -125,6 +160,9 @@ def crossover(parentList, offspring_size,nbParcelle,nbCulture,surface,numMinEnsi
     Combination=combinations(selectedBreederList, 2)
     for i in list(Combination):
         parentCombination.append(i)
+
+    #map(lambda i:parentCombination.append(i),list(Combination))
+
     for combi in parentCombination:
         indexSplit=numpy.random.randint(0,nbParcelle)
         if numpy.all(combi[0])!=numpy.all(combi[1]):
@@ -137,16 +175,27 @@ def crossover(parentList, offspring_size,nbParcelle,nbCulture,surface,numMinEnsi
                                                 nbParcelle=nbParcelle,
                                                 numMinEnsillage=numMinEnsillage,
                                                 numMinPaille=numMinPaille,
-                                                etaPaille=etaPaille,
-                                                etaEnsillage=etaEnsillage)
+                                                lambdaPaille=lambdaPaille,
+                                                lambdaEnsilage=lambdaEnsillage,
+                                                eta=eta,
+                                                R1=R1,
+                                                R2=R2,
+                                                MPTS=MPTS,
+                                                MPCn1=MPCn1)
 
             offSpringB= generateIndividual(nbCulture=nbCulture,
                                                 surface=surface,
                                                 nbParcelle=nbParcelle,
                                                 numMinEnsillage=numMinEnsillage,
                                                 numMinPaille=numMinPaille,
-                                                etaPaille=etaPaille,
-                                                etaEnsillage=etaEnsillage)
+                                                lambdaPaille=lambdaPaille,
+                                                lambdaEnsilage=lambdaEnsillage,
+                                                eta=eta,
+                                                R1=R1,
+                                                R2=R2,
+                                                MPTS=MPTS,
+                                                MPCn1=MPCn1
+                                                   )
 
         offSpring.append(offSpringA)
         offSpring.append(offSpringB)
