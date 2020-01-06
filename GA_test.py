@@ -67,6 +67,7 @@ def cal_pop_fitness(MPC,MPCn1,MPTS,R1,R2,eta,lambdaPaille,lambdaEnsillage,surfac
 
     # Calcul MB
     #marBruteParcelle = (surface * (eta1 * eta2 * eta3 * numpy.matmul(MPC, prixVenteCulture) - numpy.matmul(MPC, coutProdCulture)))
+
     marBruteParcelle=  surface * eta3 * (eta1 * eta2 * numpy.matmul(MPC, prixVenteCulture) - numpy.matmul(MPC, coutProdCulture))
     qtePaille = 0.8*surface * etaPaille*eta2*eta3
     qteEnsillage =1.5* surface*etaEnsillage*eta2*eta3

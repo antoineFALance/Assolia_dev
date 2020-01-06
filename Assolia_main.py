@@ -9,7 +9,7 @@ start_time_2 = time.clock()
 
 nbParcelle=6
 nbCulture = 5
-numGeneration=1000
+numGeneration=100
 numYear =3
 Vculture=['Soja','Blé de force','Orge', 'Maïs','Tournesol']
 
@@ -102,9 +102,11 @@ yearEliteValue,yearEliteMaxValue=[],[]
 initRepartition=MPCn1
 repartitionN1=[MPCn1]
 optimalSolution = []
+parentOptimalSolution=[]
 optimalSolutionValue = []
 repartitionOptimalSolution=[]
 repartitionOptimalSolutionValue=[]
+parentRepartitionOtimalsolution=[]
 
 if numYear>1:
     fig, ax = mpl.subplots(nrows=numYear, ncols=1,sharex='col')
@@ -116,30 +118,21 @@ for yearIndex in range(numYear):
     yplotlist = []
     eliteList = []
 
-
-
-    start_time = time.clock()
-
-
-
     if yearIndex==0:
         initRepartition=[MPCn1]
-        print("INIT REPARTITION")
-        print(initRepartition)
+
     else:
         initRepartition=optimalSolution
-        print("INIT REPARTITION")
-        print(initRepartition)
+
         optimalSolution=[]
         optimalSolutionValue = []
+        parentOptimalSolution=[]
 
 
 
     for repartition in initRepartition:
         generationCount = 0
         print("ANNEE N°" + str(yearIndex) + " REP-" + str(repartitionCount))
-
-
 
 
         while True:
@@ -222,6 +215,7 @@ for yearIndex in range(numYear):
                 eliteMaxValue.append(initMaxValue)
             yearEliteValue.append(eliteValue)
             yearEliteMaxValue.append(eliteMaxValue)
+
             distinctElitevalue=list(set(eliteValue))
 
             #Sécurité en cas de données distinctes insuffisante
@@ -232,22 +226,30 @@ for yearIndex in range(numYear):
 
 
             for elite in sorted(distinctElitevalue,reverse=True)[:numSolutionperYear]:
+
                 optimalSolution.append(eliteRepartition[eliteValue.index(elite)][0])
                 optimalSolutionValue.append(elite)
-
+                parentOptimalSolution.append(repartition)
 
 
         else:
             print("IMPOSSIBLE TO CONVERGE")
-            print("change constraints")
+            #Sécurité en case de non convergence--> on prend la premiere solution
+            # optimalSolution.append(repartitionOptimalSolution[yearIndex][0])
+            # optimalSolutionValue.append(repartitionOptimalSolutionValue[yearIndex][0])
+
+            optimalSolution.append(np.zeros((nbParcelle,nbCulture)))
+            repartitionOptimalSolutionValue.append(0)
+
 
         repartitionCount+=1
 
+
     repartitionOptimalSolution.append(optimalSolution)
     repartitionOptimalSolutionValue.append(optimalSolutionValue)
+    parentRepartitionOtimalsolution.append(parentOptimalSolution)
 
-    print("repartitionOptimalSolutionValue")
-    print(repartitionOptimalSolutionValue)
+
 #Création de la matrice des résultats
 listMatrix,colMatrix=[],[]
 
@@ -262,23 +264,69 @@ for indexYear in range(numYear):
 
     colMatrix.append(np.matmul(repartitionOptimalSolutionValue[indexYear],listMatrix[indexYear]))
 
-print("debug")
+
+
 matrixResult=np.transpose(colMatrix)
 columnLabel=[]
 dfResult=pd.DataFrame(matrixResult)
 dfResult['mean'] = dfResult.mean(axis=1)
 maxMean=dfResult[dfResult['mean']==dfResult['mean'].max()]
 resultList=maxMean.values.tolist()[0]
-print(dfResult)
-print("RESULT")
-print(maxMean.values.tolist())
-configResultList,test=[],[]
-for indexYear in range(numYear):
-    configResultList.append(repartitionOptimalSolution[indexYear][repartitionOptimalSolutionValue[indexYear].index(resultList[indexYear])])
-    test.append(repartitionOptimalSolutionValue[indexYear][repartitionOptimalSolutionValue[indexYear].index(resultList[indexYear])])
-print(configResultList)
-print(test)
 
+print("debug")
+print(repartitionOptimalSolutionValue)
+
+print("RESULT")
+print(dfResult)
+print(maxMean.values.tolist())
+print("row index")
+print(dfResult.index.get_loc(maxMean.iloc[0].name))
+rowSolutionIndex=dfResult.index.get_loc(maxMean.iloc[0].name)
+configResultList,qtePaille,qteEnsillage,parentConfigList=[],[],[],[]
+for indexYear in range(numYear):
+    # print("DEBUG 2")
+    # print(indexYear)
+    # print("##")
+    # print(repartitionOptimalSolution[indexYear][(rowSolutionIndex//numSolutionperYear**(numYear-(indexYear+1)))])
+
+
+
+    # configResultList.append(repartitionOptimalSolution[indexYear][repartitionOptimalSolutionValue[indexYear].index(resultList[indexYear])])
+
+    configResultList.append(repartitionOptimalSolution[indexYear][(rowSolutionIndex//(numSolutionperYear**(numYear-(indexYear+1))))])
+    parentConfigList.append(parentRepartitionOtimalsolution[indexYear][(rowSolutionIndex // (numSolutionperYear ** (numYear - (indexYear + 1))))])
+
+    etaPaille = np.matmul(np.matmul(configResultList[indexYear], lambdaPaille), eta)
+    etaEnsillage = np.matmul(np.matmul(configResultList[indexYear], lambdaEnsilage), eta)
+
+    v = np.zeros(nbParcelle)
+    for i in range(len(configResultList[indexYear])):
+        v = v + np.matmul(np.matmul(configResultList[indexYear][i], R1), np.transpose(MPTS[i])) * np.identity(nbParcelle)[i]
+
+    eta2 = (np.ones(nbParcelle) - v / 100)
+
+    u = np.zeros(nbParcelle)
+    for i in range(nbParcelle):
+        u = u + np.matmul(np.matmul(R2, configResultList[indexYear][i]), MPCn1[i]) * np.identity(nbParcelle)[i]
+    eta3 = (u / 100)
+
+    qtePaille.append(surface * etaPaille * eta2 * eta3 * 0.8)
+    qteEnsillage.append(surface * etaEnsillage * eta2 * eta3 * 1.5)
+
+print("#####A#####")
+print(configResultList)
+print("#####B#####")
+print(parentConfigList)
+# print("QTE PAILLE")
+# print(qtePaille)
+# print("QTE ENSILLAGE")
+# print(qteEnsillage)
+# print("temps execution")
+# print(time.clock() - start_time_2)
+print("#####1#######")
+print(repartitionOptimalSolutionValue)
+print("#####2######")
+print(repartitionOptimalSolution)
 
 
 

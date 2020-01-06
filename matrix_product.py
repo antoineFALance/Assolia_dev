@@ -6,12 +6,12 @@ nbCulture = 5
 nbParcelle = len(parcelle)
 
 
-MPC = np.array([[0,0,0,0,1],
-               [0,0,0,0,1],
-               [0,0,0,0,1],
-               [0,1,0,0,0],
-               [0,1,0,0,0],
-               [0,0,0,1,0]])
+MPC = np.array([[ 0.,  0.,  0.,  0.,  1.],
+       [ 0.,  0.,  0.,  0.,  1.],
+       [ 0.,  0.,  0.,  0.,  1.],
+       [ 0.,  1.,  0.,  0.,  0.],
+       [ 0.,  0.,  0.,  1.,  0.],
+       [ 0.,  1.,  0.,  0.,  0.]])
 
 #Construction matrice Lambda paille
 indexCulturePaille=[]
@@ -32,12 +32,12 @@ lambdaEnsilage=np.zeros((nbCulture,nbCulture))
 for index in indexCultureEnsilage:
     lambdaEnsilage[index][index]=1
 
-MPCn1 = np.array([[0,0,0,0,1],
-               [0,1,0,0,0],
-               [0,0,1,0,0],
-               [1,0,0,0,0],
-               [1,0,0,0,0],
-               [0,0,0,1,0]])
+MPCn1 = np.array([[ 0.,  1.,  0.,  0.,  0.],
+       [ 0.,  1.,  0.,  0.,  0.],
+       [ 0.,  0.,  0.,  0.,  1.],
+       [ 0.,  0.,  0.,  1.,  0.],
+       [ 0.,  1.,  0.,  0.,  0.],
+       [ 0.,  0.,  0.,  0.,  1.]])
 
 
 MPTS=np.array([[1, 0, 0, 0],
@@ -132,3 +132,4 @@ qteEnsillage=1.5*surface*etaEnsillage*eta2*eta3
 
 print(sum(qtePaille))
 print(sum(qteEnsillage))
+

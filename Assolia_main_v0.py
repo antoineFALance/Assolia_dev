@@ -9,7 +9,7 @@ start_time_2 = time.clock()
 nbParcelle=6
 nbCulture = 5
 numGeneration=10000
-numYear =3
+numYear =1
 Vculture=['Soja','Blé de force','Orge', 'Maïs','Tournesol']
 
 numMinPaille=200
