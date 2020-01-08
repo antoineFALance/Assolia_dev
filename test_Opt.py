@@ -41,6 +41,25 @@ surface=np.array([10,10,10,20,20,20])
 prixVenteCulture=np.array([350,200,150,150,400])
 coutProdCulture=np.array([400,600,400,1200,300])
 
+#Construction matrice Lambda paille
+indexCulturePaille=[]
+for culture in Vculture:
+    if culture=='Blé de force' or culture =='Orge':
+        indexCulturePaille.append(Vculture.index(culture))
+lambdaPaille=np.zeros((nbCulture,nbCulture))
+for index in indexCulturePaille:
+    lambdaPaille[index][index]=1
+
+
+#Construction matrice Lambda ensilage
+indexCultureEnsilage=[]
+for culture in Vculture:
+    if culture=='Maïs':
+        indexCultureEnsilage.append(Vculture.index(culture))
+lambdaEnsilage=np.zeros((nbCulture,nbCulture))
+for index in indexCultureEnsilage:
+    lambdaEnsilage[index][index]=1
+
 numPailleMin = 200
 numEnsilageMin = 250
 numSolutionYear=3
@@ -131,13 +150,20 @@ for indexYear in range(numYear):
         # print(weight)
 
         #7.Matrice des contraintes
-        constMatrix1 = np.array([
-                [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
-                [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]])
+        # constMatrix1 = np.array([
+        #         [1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #         [0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+        #         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1, 0, 0, 0, 0, 0],
+        #         [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1, 1, 1, 1, 1]])
+        constMatrix1=np.zeros((nbParcelle,nbParcelle*nbCulture))
+        for i in range(nbParcelle):
+            for j in range(nbParcelle*nbCulture):
+                if nbCulture*i<=j<=5*(i+1)-1:
+                    constMatrix1[i][j]=1
+        print("DEBUG")
+        print(constMatrix1)
         constMatrix2 = np.array(weightPaille)
         constMatrix3 = np.array(weightEnsilage)
         constMatrix = np.vstack((constMatrix1, constMatrix2, constMatrix3))
@@ -274,10 +300,34 @@ print(resultList)
 print("row index")
 print(dfResult.index.get_loc(maxMean.iloc[0].name))
 rowSolutionIndex=dfResult.index.get_loc(maxMean.iloc[0].name)
-configResultList=[]
+configResultList,qtePaille,qteEnsillage=[],[],[]
 
 for indexYear in range(numYear):
     configResultList.append(yearSolutionRepartition[indexYear][(rowSolutionIndex//(numSolutionYear**(numYear-(indexYear+1))))])
 
+    if indexYear>0:
+        MPCn1=configResultList[indexYear-1]
+
+    eta1 = np.matmul(configResultList[indexYear], eta)
+
+    v = np.zeros(6)
+
+    for i in range(len(configResultList[indexYear])):
+        v = v + np.matmul(np.matmul(configResultList[indexYear][i], R1), np.transpose(MPTS[i])) * np.identity(6)[i]
+
+    eta2 = (np.ones(6) - v / 100)
+
+    u = np.zeros(6)
+    for i in range(6):
+        u = u + np.matmul(np.matmul(R2, configResultList[indexYear][i]), MPCn1[i]) * np.identity(6)[i]
+
+    eta3 = (u / 100)
+    etaPaille = np.matmul(np.matmul(configResultList[indexYear], lambdaPaille), eta)
+    etaEnsillage = np.matmul(np.matmul(configResultList[indexYear], lambdaEnsilage), eta)
+    qtePaille.append(sum(0.8 * surface * etaPaille * eta2 * eta3))
+    qteEnsillage.append(sum(1.5 * surface * etaEnsillage * eta2 * eta3))
+
+
 print(configResultList)
-print(time.clock() - start_time_2)
+print(qtePaille)
+print(qteEnsillage)

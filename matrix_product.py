@@ -32,13 +32,12 @@ lambdaEnsilage=np.zeros((nbCulture,nbCulture))
 for index in indexCultureEnsilage:
     lambdaEnsilage[index][index]=1
 
-MPCn1 = np.array([[ 0.,  1.,  0.,  0.,  0.],
+MPCn1 =np.array([[ 0.,  1.,  0.,  0.,  0.],
        [ 0.,  1.,  0.,  0.,  0.],
        [ 0.,  1.,  0.,  0.,  0.],
        [ 0.,  0.,  0.,  1.,  0.],
        [ 0.,  0.,  0.,  0.,  1.],
        [ 0.,  1.,  0.,  0.,  0.]])
-
 
 MPTS=np.array([[1, 0, 0, 0],
                [1, 0, 0, 0],
@@ -69,9 +68,6 @@ eta=np.array([4,8,7,13,3.4])
 # etaEnsillage=np.array([0,0,0,18.525,0])
 
 eta1=np.matmul(MPC,eta)
-
-
-
 
 v = np.zeros(6)
 
