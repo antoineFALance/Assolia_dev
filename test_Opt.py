@@ -1,16 +1,20 @@
 import numpy as np
 import pandas as pd
 from ortools.linear_solver import pywraplp
+from tabulate import tabulate
+import time
+start_time_2 = time.clock()
 
+Vculture=['Soja','Blé de force','Orge', 'Maïs','Tournesol']
 nbParcelle=6
 nbCulture = 5
 
-MPCn1 = np.array([[0,0,0,0,1],
-               [0,1,0,0,0],
+MPCn1 = np.array([[0,1,0,0,0],
                [0,0,1,0,0],
+               [0,0,0,0,1],
+               [0,0,0,1,0],
                [1,0,0,0,0],
-               [1,0,0,0,0],
-               [0,0,0,1,0]])
+               [0,1,0,0,0]])
 
 
 MPTS=np.array([[1, 0, 0, 0],
@@ -38,9 +42,9 @@ prixVenteCulture=np.array([350,200,150,150,400])
 coutProdCulture=np.array([400,600,400,1200,300])
 
 numPailleMin = 200
-numEnsilageMin = 200
-numSolutionYear=5
-numYear=5
+numEnsilageMin = 250
+numSolutionYear=3
+numYear=3
 
 eta=np.array([4,8,7,13,3.4])
 
@@ -116,7 +120,8 @@ for indexYear in range(numYear):
         Mg= np.zeros((nbParcelle,nbCulture))
         for i in range(nbCulture):
             for j in range(nbParcelle):
-                Mg[j][i]=surface[j]*(etaG[j][i]*Pv[j][i]-Ct[j][i])
+                #Mg[j][i]=surface[j]*(etaG[j][i]*Pv[j][i]-Ct[j][i])
+                Mg[j][i]=surface[j]*eta_n1[j][i]*(etap[j][i]*eta_ts[j][i]*Pv[j][i]-Ct[j][i])
         # print(Mg)
 
         weight =[]
@@ -238,10 +243,10 @@ for indexYear in range(numYear):
     initRepartition=solutionRepartition
     yearSolutionRepartition.append(solutionRepartition)
     yearSolutionValue.append(solutionValue)
-# print("DEBUG")
+print("DEBUG")
 #
-# print(yearSolutionValue)
-# print(yearSolutionRepartition)
+print(yearSolutionValue)
+#print(yearSolutionRepartition)
 
 #Création de la matrice des résultats
 listMatrix,colMatrix=[],[]
@@ -261,7 +266,7 @@ columnLabel=[]
 dfResult=pd.DataFrame(matrixResult)
 dfResult['mean'] = dfResult.mean(axis=1)
 
-print(dfResult)
+print(tabulate(dfResult,headers='keys',tablefmt='psql'))
 maxMean=dfResult[dfResult['mean']==dfResult['mean'].max()]
 resultList=maxMean.values.tolist()[0]
 print("RESULT")
@@ -275,3 +280,4 @@ for indexYear in range(numYear):
     configResultList.append(yearSolutionRepartition[indexYear][(rowSolutionIndex//(numSolutionYear**(numYear-(indexYear+1))))])
 
 print(configResultList)
+print(time.clock() - start_time_2)
