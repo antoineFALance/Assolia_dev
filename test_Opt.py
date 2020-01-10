@@ -295,10 +295,10 @@ dfResult['mean'] = dfResult.mean(axis=1)
 print(tabulate(dfResult,headers='keys',tablefmt='psql'))
 maxMean=dfResult[dfResult['mean']==dfResult['mean'].max()]
 resultList=maxMean.values.tolist()[0]
-print("RESULT")
-print(resultList)
-print("row index")
-print(dfResult.index.get_loc(maxMean.iloc[0].name))
+# print("RESULT")
+# print(resultList)
+# print("row index")
+# print(dfResult.index.get_loc(maxMean.iloc[0].name))
 rowSolutionIndex=dfResult.index.get_loc(maxMean.iloc[0].name)
 configResultList,qtePaille,qteEnsillage=[],[],[]
 
@@ -331,9 +331,11 @@ culture,cultureConfig=[],[]
 dfConfig=pd.DataFrame()
 dfPaille=pd.DataFrame()
 dfEnsilage=pd.DataFrame()
+dfMb=pd.DataFrame()
 dfConfig["Parcelle"]=Vparcelle
-dfPaille["Qte"]=['Qte paille']
-dfEnsilage["Qte"]=["Qte Ensilage"]
+dfPaille["-"]=['Qte paille']
+dfEnsilage["-"]=["Qte Ensilage"]
+dfMb["-"]=["Marge Brute"]
 year=0
 for config in configResultList:
     culture=[]
@@ -343,9 +345,13 @@ for config in configResultList:
     dfConfig["Culture Année "+str(year)]=culture
     dfPaille["Année "+str(year)]=qtePaille[year]
     dfEnsilage["Année " + str(year)] = qteEnsillage[year]
+    dfMb["Année " + str(year)]=resultList[year]
     cultureConfig.append(culture)
     year=year+1
 
+
+print(tabulate(dfMb,headers='keys',tablefmt='psql'))
+print('######')
 print(tabulate(dfConfig,headers='keys',tablefmt='psql'))
 print("######")
 print(tabulate(dfPaille,headers='keys',tablefmt='psql'))
