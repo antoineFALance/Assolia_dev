@@ -6,6 +6,7 @@ import time
 start_time_2 = time.clock()
 
 Vculture=['Soja','Blé de force','Orge', 'Maïs','Tournesol']
+Vparcelle=['Souleilla','Paguère','4 chemins','Champs long','Loujeas','Labourdte']
 nbParcelle=6
 nbCulture = 5
 
@@ -38,7 +39,9 @@ R2=np.array([[50,100,100,95,95],
              [100,95,95,95,95]])
 
 surface=np.array([10,10,10,20,20,20])
-prixVenteCulture=np.array([350,200,150,150,400])
+#prixVenteCulture=np.array([350,200,150,150,400])
+#prixVenteCulture=np.array([350,200,150,150,375])
+prixVenteCulture=np.array([350,200,185,150,400])
 coutProdCulture=np.array([400,600,400,1200,300])
 
 #Construction matrice Lambda paille
@@ -162,8 +165,7 @@ for indexYear in range(numYear):
             for j in range(nbParcelle*nbCulture):
                 if nbCulture*i<=j<=5*(i+1)-1:
                     constMatrix1[i][j]=1
-        print("DEBUG")
-        print(constMatrix1)
+
         constMatrix2 = np.array(weightPaille)
         constMatrix3 = np.array(weightEnsilage)
         constMatrix = np.vstack((constMatrix1, constMatrix2, constMatrix3))
@@ -269,9 +271,7 @@ for indexYear in range(numYear):
     initRepartition=solutionRepartition
     yearSolutionRepartition.append(solutionRepartition)
     yearSolutionValue.append(solutionValue)
-print("DEBUG")
-#
-print(yearSolutionValue)
+
 #print(yearSolutionRepartition)
 
 #Création de la matrice des résultats
@@ -327,7 +327,30 @@ for indexYear in range(numYear):
     qtePaille.append(sum(0.8 * surface * etaPaille * eta2 * eta3))
     qteEnsillage.append(sum(1.5 * surface * etaEnsillage * eta2 * eta3))
 
+culture,cultureConfig=[],[]
+dfConfig=pd.DataFrame()
+dfPaille=pd.DataFrame()
+dfEnsilage=pd.DataFrame()
+dfConfig["Parcelle"]=Vparcelle
+dfPaille["Qte"]=['Qte paille']
+dfEnsilage["Qte"]=["Qte Ensilage"]
+year=0
+for config in configResultList:
+    culture=[]
+    for row in config:
+        culture.append(Vculture[list(row).index(1)])
 
-print(configResultList)
-print(qtePaille)
-print(qteEnsillage)
+    dfConfig["Culture Année "+str(year)]=culture
+    dfPaille["Année "+str(year)]=qtePaille[year]
+    dfEnsilage["Année " + str(year)] = qteEnsillage[year]
+    cultureConfig.append(culture)
+    year=year+1
+
+print(tabulate(dfConfig,headers='keys',tablefmt='psql'))
+print("######")
+print(tabulate(dfPaille,headers='keys',tablefmt='psql'))
+print("######")
+print(tabulate(dfEnsilage,headers='keys',tablefmt='psql'))
+
+
+
