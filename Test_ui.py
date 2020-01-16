@@ -11,13 +11,26 @@ Const.ColumnSize = 90
 Const.MyApp = QtWidgets.QApplication(sys_argv)
 Const.DI = DefaultVariablesInit()
 
-VInputN_1 = Const.DI.VInputN_1_Init
 VOutput_ForTest = np.array([0])
 
 
 def ExitFunction():
     print("Exit")
     Const.MyApp.quit()
+
+
+# InitTable: Init a table with row and column number. Init also the size of table
+def InitTable(Table, RowNb, CoulmnNb, CoordX, CoordY):
+    # Set row and column number
+    Table.setRowCount(RowNb)
+    Table.setColumnCount(CoulmnNb)
+    # Set rows height
+    for row in range(RowNb):
+        Table.setRowHeight(row, Const.RowSize)
+    # Set column height
+    for column in range(CoulmnNb):
+        Table.setColumnWidth(column, Const.ColumnSize)
+    Table.setGeometry(QtCore.QRect(CoordX, CoordY, CoulmnNb * Const.ColumnSize + 2, RowNb * Const.RowSize + 2))
 
 
 class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
@@ -34,6 +47,10 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         self.InitAllTab()
 
     def LoadData(self):
+        # Load Default data if there is no file to load.
+        self.LoadDefaultData()
+
+    def LoadDefaultData(self):
         self.Vparcelle = Const.DI.Vparcelle_Init
         self.NbParcelle = Const.DI.NbParcelle_Init
 
@@ -60,22 +77,18 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         # Init config tab
         self.InitConfigTab()
 
-        # Get input for computation
-        #self.GetConfig()
-
         # Init Input table:
         self.InitInputTab()
-
-        # Get input for computation
-        #self.GetInput()
 
         # Init output tab
         self.InitOutputTab()
 
+        self.WrapperModelInput()
+
     # InitConfigTab: Init tables in tab "Configuration"
     def InitConfigTab(self):
         ConfCultureTable = self.ui.ConfigCultureTypeTable
-        self.InitTable(ConfCultureTable, 1, self.NbCulture, 0, 25)
+        InitTable(ConfCultureTable, 1, self.NbCulture, 0, 25)
         # No Header
 
         for Culture in range(self.NbCulture):
@@ -85,10 +98,10 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         self.ui.NbYearSimulationBox.setValue(self.NbAnneeSimulee)
         self.ui.NbSimuPerYearBox.setValue(self.NbSimuPerYear)
         # On change:
-        ConfCultureTable.itemChanged.connect(self.ConfigChangedMethod)
+        ConfCultureTable.itemChanged.connect(self.OnChange_ConfCultureTable)
 
-    # ConfigChangedMethod: Method called on change event in ConfigCultureTypeTable
-    def ConfigChangedMethod(self):
+    # OnChange_ConfCultureTable: Method called on change event in ConfigCultureTypeTable
+    def OnChange_ConfCultureTable(self):
         ConfCultureTable = self.ui.ConfigCultureTypeTable
         row = ConfCultureTable.currentRow()
         col = ConfCultureTable.currentColumn()
@@ -101,39 +114,23 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             for Parcelle in range(self.NbParcelle):
                 InTable.cellWidget(Parcelle + 1, 1).setItemText(col, self.Vculture[col])
 
-    # GetConfig: Wrapper for input from tab "Config"
-    def GetConfig(self):
-        ConfCultureTable = self.ui.ConfigCultureTypeTable
-        self.Vculture = []
-        for culture in range(ConfCultureTable.columnCount()):
-            cell = ConfCultureTable.item(0, culture)
-            self.Vculture.append(cell.text())
-        self.NbCulture = len(self.Vculture)
-        self.NbAnneeSimulee = self.ui.NbYearSimulationBox.value()
-        self.NbSimuParAnnee = self.ui.NbSimuPerYearBox.value()
-
-        # For debug only:
-        # print(self.Vculture)
-        # print(self.NbCulture)
-        # print(self.NbAnneeSimulee)
-
     def FillVInputN_1_ForTest(self):
         culture = 0
-        VInputN_1.resize(self.NbParcelle)
+        self.VInputN_1.resize(self.NbParcelle)
         for Parcelle in range(self.NbParcelle):
             culture = (culture + 1) % self.NbCulture
-            VInputN_1[Parcelle] = culture
+            self.VInputN_1[Parcelle] = culture
 
     # InitInputTab: Init tables in tab "Entrées"
     def InitInputTab(self):
         InTable = self.ui.ParcelCultureInputTable
-        self.InitTable(InTable, self.NbParcelle + 1, 3, 0, 0)
+        InitTable(InTable, self.NbParcelle + 1, 3, 0, 0)
         # Fill Header
         InTable.setItem(0, 0, QTableWidgetItem("Parcelle"))
         InTable.setItem(0, 1, QTableWidgetItem("Culture n-1"))
         InTable.setItem(0, 2, QTableWidgetItem("Taille Parcelle"))
 
-        self.FillVInputN_1_ForTest()
+        # self.FillVInputN_1_ForTest()
 
         for Parcelle in range(self.NbParcelle):
             # Fill Row Header with parcel names
@@ -144,19 +141,14 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             for t in self.Vculture:
                 combo.addItem(t)
             InTable.setCellWidget(Parcelle + 1, 1, combo)
-            InTable.cellWidget(Parcelle + 1, 1).setCurrentIndex(VInputN_1[Parcelle])
+            InTable.cellWidget(Parcelle + 1, 1).setCurrentIndex(self.VInputN_1[Parcelle])
             InTable.setItem(Parcelle + 1, 2, QTableWidgetItem(str(self.VparcelleTaille[Parcelle])))
 
         # On change:
-        InTable.itemChanged.connect(self.InputChangedMethod)
+        InTable.itemChanged.connect(self.OnChange_InputTable)
 
-    # GetInput: Wrapper for input from tab "Entrées"
-    def GetInput(self):
-        self.Vparcelle = Const.DI.Vparcelle_Init
-        self.NbParcelle = self.ui.ParcelCultureInputTable.rowCount() - 1
-
-    # InputChangedMethod: Method called on change event in ParcelCultureInputTable
-    def InputChangedMethod(self):
+    # OnChange_InputTable: Method called on change event in ParcelCultureInputTable
+    def OnChange_InputTable(self):
         InTable = self.ui.ParcelCultureInputTable
         row = InTable.currentRow()
         col = InTable.currentColumn()
@@ -172,12 +164,13 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         self.InitCultureOutputTable(self.ui.tableWidget)
         self.FillOutputTable()
         self.InitReportOutputTable(self.ui.tableMarginConstraint)
+        self.ui.IndexBestResultBox.setMaximum(self.NbSimuPerYear - 1)
         self.ui.IndexBestResultBox.valueChanged.connect(self.FillOutputTable)
 
     # InitCultureOutputTable: Init culture output table with header
     def InitCultureOutputTable(self, CultOutTab):
         # Set culture output table
-        self.InitTable(CultOutTab, self.NbParcelle + 1, self.NbAnneeSimulee + 2, 0, 0)
+        InitTable(CultOutTab, self.NbParcelle + 1, self.NbAnneeSimulee + 2, 0, 0)
         # Fill Column header with {Parcelle, n-1, n, ..., n + x} with x = NbAnneeSimulee - 1
         CultOutTab.setItem(0, 0, QTableWidgetItem("Parcelle"))
         CultOutTab.setItem(0, 1, QTableWidgetItem("n - 1"))
@@ -189,12 +182,12 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             # Fill Row Header with parcel names
             CultOutTab.setItem(Parcelle + 1, 0, QTableWidgetItem(self.Vparcelle[Parcelle]))
             # Fill first column with input of n-1 year
-            CultOutTab.setItem(Parcelle + 1, 1, QTableWidgetItem(self.Vculture[VInputN_1[Parcelle]]))
+            CultOutTab.setItem(Parcelle + 1, 1, QTableWidgetItem(self.Vculture[self.VInputN_1[Parcelle]]))
 
     # InitReportOutputTable: Init report table with header
     def InitReportOutputTable(self, OutReportTab):
         # Set Margin and constraint table
-        self.InitTable(OutReportTab, 3, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 1) * Const.RowSize + 2)
+        InitTable(OutReportTab, 3, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 1) * Const.RowSize + 2)
         # Fill Row header
         OutReportTab.setItem(0, 0, QTableWidgetItem("Marge"))
         OutReportTab.setItem(1, 0, QTableWidgetItem("Qtt paille"))
@@ -212,7 +205,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     # FillOutputTable: Fill the output table with culture associated with
     def FillOutputTable(self):
         CultOutTab = self.ui.tableWidget
-        self.FillVOutput_ForTest(self.NbAnneeSimulee, self.NbParcelle, self.NbSimuParAnnee)
+        self.FillVOutput_ForTest(self.NbAnneeSimulee, self.NbParcelle, self.NbSimuPerYear)
         IndexBestResult = self.ui.IndexBestResultBox.value()
         for Year in range(self.NbAnneeSimulee):
             for Parcelle in range(self.NbParcelle):
@@ -220,18 +213,49 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
                 CultOutTab.setItem(Parcelle + 1, Year + 2,
                                    QTableWidgetItem(self.Vculture[index]))
 
-    # InitTable: Init a table with row and column number. Init also the size of table
-    def InitTable(self, Table, RowNb, CoulmnNb, CoordX, CoordY):
-        # Set row and column number
-        Table.setRowCount(RowNb)
-        Table.setColumnCount(CoulmnNb)
-        # Set rows height
-        for row in range(RowNb):
-            Table.setRowHeight(row, Const.RowSize)
-        # Set column height
-        for column in range(CoulmnNb):
-            Table.setColumnWidth(column, Const.ColumnSize)
-        Table.setGeometry(QtCore.QRect(CoordX, CoordY, CoulmnNb * Const.ColumnSize + 2, RowNb * Const.RowSize + 2))
+
+    def WrapperModelInput(self):
+        self.ModelInput = {}
+        # Format MPCn1
+        MPCn1 = np.zeros((self.NbParcelle, self.NbCulture))
+        for Parcelle in range(self.NbParcelle):
+            MPCn1[Parcelle][self.VInputN_1[Parcelle]] = 1
+        self.ModelInput["MPCn1"] = MPCn1
+        # print("MPCn1 = ")
+        # print(self.ModelInput["MPCn1"])
+
+        # Format MPTS
+        MPTS = np.zeros((self.NbParcelle, self.NbTypeSol))
+        for Parcelle in range(self.NbParcelle):
+            MPTS[Parcelle][self.VparcelleTypeSol[Parcelle]] = 1
+        self.ModelInput["MPTS"] = MPTS
+        # print("MPCn1 = ")
+        # print(self.ModelInput["MPTS"])
+
+        # Format surfaces
+        self.ModelInput["surface"] = self.VparcelleTaille
+        # print("surface = ")
+        # print(self.ModelInput["surface"])
+
+        # Format numPailleMin
+        self.ModelInput["numPailleMin"] = self.PailleMin
+        # print("numPailleMin = ")
+        # print(self.ModelInput["numPailleMin"])
+
+        # Format numEnsilageMin
+        self.ModelInput["numEnsilageMin"] = self.EnsilageMin
+        # print("numEnsilageMin = ")
+        # print(self.ModelInput["numEnsilageMin"])
+
+        # Format numYear
+        self.ModelInput["numYear"] = self.NbAnneeSimulee
+        # print("numYear = ")
+        # print(self.ModelInput["numEnsilageMin"])
+
+        # Format numSolutionYear
+        self.ModelInput["numSolutionYear"] = self.NbSimuPerYear
+        # print("numSolutionYear = ")
+        # print(self.ModelInput["numSolutionYear"])
 
 
 if __name__ == "__main__":

@@ -2,7 +2,7 @@ from BouiBouiTools import Const
 import numpy as np
 
 # Initialisation of variables to be used in case that there is no file to open.
-Const.Vparcelle_Init = ['souleilla', 'paguère', '4 chemins', 'champ long', 'lougeas', 'labourdette']
+Const.Vparcelle_Init = ['Souleilla', 'Paguère', '4 chemins', 'Champ long', 'Lougeas', 'Labourdette']
 Const.NbParcelle_Init = len(Const.Vparcelle_Init)
 
 Const.VparcelleTaille_Init = np.array([10, 10, 10, 20, 20, 20])
@@ -16,16 +16,16 @@ assert Const.NbParcelleTypeSol_Init == Const.NbParcelle_Init
 Const.Vculture_Init = ['Soja', 'Blé de force', 'Orge', 'Maïs', 'Tournesol']
 Const.NbCulture_Init = len(Const.Vculture_Init)
 
-Const.Vtypesol_Init = ['Coteaux', 'plaines argilo-calcaires', 'plaines boulbènes', 'plaines irrigués']
+Const.Vtypesol_Init = ['Coteaux', 'Plaines argilo-calcaires', 'Plaines boulbènes', 'Plaines irrigués']
 Const.NbTypeSol_Init = len(Const.Vtypesol_Init)
 
-Const.NbSimuPerYear_Init = 5
+Const.NbSimuPerYear_Init = 3
 
 Const.NbAnneeSimulee_Init = 3
 Const.PailleMin_Init = 200
 Const.EnsilageMin_Init = 250
 
-Const.VInputN_1_Init = np.array([0, 1, 2, 3, 4, 5])
+Const.VInputN_1_Init = np.array([1, 2, 4, 3, 0, 1])
 assert len(Const.VInputN_1_Init) == Const.NbParcelle_Init
 
 class DefaultInit:

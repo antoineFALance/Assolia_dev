@@ -37,7 +37,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>1</number>
+     <number>0</number>
     </property>
     <widget class="QWidget" name="InputTab">
      <attribute name="title">
@@ -351,9 +351,9 @@ p, li { white-space: pre-wrap; }
      <widget class="QPlainTextEdit" name="IndexBestResultText">
       <property name="geometry">
        <rect>
-        <x>450</x>
+        <x>540</x>
         <y>10</y>
-        <width>160</width>
+        <width>70</width>
         <height>25</height>
        </rect>
       </property>
