@@ -30,39 +30,60 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         self.ui.setupUi(self)
         self.ui.Close_test.clicked.connect(ExitFunction)
         self.ui.actionExit.triggered.connect(ExitFunction)
+        self.LoadData()
         self.InitAllTab()
+
+    def LoadData(self):
+        self.Vparcelle = Const.DI.Vparcelle_Init
+        self.NbParcelle = Const.DI.NbParcelle_Init
+
+        self.VparcelleTaille = Const.DI.VparcelleTaille_Init
+
+        self.VparcelleTypeSol = Const.DI.VparcelleTypeSol_Init
+        self.NbParcelleTypeSol = Const.DI.NbParcelleTypeSol_Init
+
+        self.Vculture = Const.DI.Vculture_Init
+        self.NbCulture = Const.DI.NbCulture_Init
+
+        self.Vtypesol = Const.DI.Vtypesol_Init
+        self.NbTypeSol = Const.DI.NbTypeSol_Init
+
+        self.NbSimuPerYear = Const.DI.NbSimuPerYear_Init
+
+        self.NbAnneeSimulee = Const.DI.NbAnneeSimulee_Init
+        self.PailleMin = Const.DI.PailleMin_Init
+        self.EnsilageMin = Const.DI.EnsilageMin_Init
+
+        self.VInputN_1 = Const.DI.VInputN_1_Init
 
     def InitAllTab(self):
         # Init config tab
         self.InitConfigTab()
 
         # Get input for computation
-        self.GetConfig()
+        #self.GetConfig()
 
         # Init Input table:
         self.InitInputTab()
 
         # Get input for computation
-        self.GetInput()
+        #self.GetInput()
 
         # Init output tab
         self.InitOutputTab()
 
-    # def UpdateConfig(self):
-    #     self.GetConfig()
-
     # InitConfigTab: Init tables in tab "Configuration"
     def InitConfigTab(self):
         ConfCultureTable = self.ui.ConfigCultureTypeTable
-        self.InitTable(ConfCultureTable, 1, Const.DI.NbCulture_Init, 0, 25)
+        self.InitTable(ConfCultureTable, 1, self.NbCulture, 0, 25)
         # No Header
 
-        for Culture in range(Const.DI.NbCulture_Init):
+        for Culture in range(self.NbCulture):
             # Init Row with culture names
-            ConfCultureTable.setItem(0, Culture, QTableWidgetItem(Const.DI.Vculture_Init[Culture]))
+            ConfCultureTable.setItem(0, Culture, QTableWidgetItem(self.Vculture[Culture]))
 
-        self.ui.NbYearSimulationBox.setValue(Const.DI.NbAnneeSimulee_Init)
-        self.ui.NbSimuPerYearBox.setValue(Const.DI.NbSimuPerYear_Init)
+        self.ui.NbYearSimulationBox.setValue(self.NbAnneeSimulee)
+        self.ui.NbSimuPerYearBox.setValue(self.NbSimuPerYear)
         # On change:
         ConfCultureTable.itemChanged.connect(self.ConfigChangedMethod)
 
@@ -96,27 +117,27 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         # print(self.NbCulture)
         # print(self.NbAnneeSimulee)
 
-    def FillVInputN_1_ForTest(self, NbParcelle):
+    def FillVInputN_1_ForTest(self):
         culture = 0
-        VInputN_1.resize(NbParcelle)
-        for Parcelle in range(NbParcelle):
+        VInputN_1.resize(self.NbParcelle)
+        for Parcelle in range(self.NbParcelle):
             culture = (culture + 1) % self.NbCulture
             VInputN_1[Parcelle] = culture
 
     # InitInputTab: Init tables in tab "Entrées"
     def InitInputTab(self):
         InTable = self.ui.ParcelCultureInputTable
-        self.InitTable(InTable, Const.DI.NbParcelle_Init + 1, 3, 0, 0)
+        self.InitTable(InTable, self.NbParcelle + 1, 3, 0, 0)
         # Fill Header
         InTable.setItem(0, 0, QTableWidgetItem("Parcelle"))
         InTable.setItem(0, 1, QTableWidgetItem("Culture n-1"))
         InTable.setItem(0, 2, QTableWidgetItem("Taille Parcelle"))
 
-        self.FillVInputN_1_ForTest(Const.DI.NbParcelle_Init)
+        self.FillVInputN_1_ForTest()
 
-        for Parcelle in range(Const.DI.NbParcelle_Init):
+        for Parcelle in range(self.NbParcelle):
             # Fill Row Header with parcel names
-            InTable.setItem(Parcelle + 1, 0, QTableWidgetItem(Const.DI.Vparcelle_Init[Parcelle]))
+            InTable.setItem(Parcelle + 1, 0, QTableWidgetItem(self.Vparcelle[Parcelle]))
             # Fill first column with input of n-1 year
             # Create list box selection for culture, based on what is in config tab
             combo = QtWidgets.QComboBox()
@@ -124,7 +145,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
                 combo.addItem(t)
             InTable.setCellWidget(Parcelle + 1, 1, combo)
             InTable.cellWidget(Parcelle + 1, 1).setCurrentIndex(VInputN_1[Parcelle])
-            InTable.setItem(Parcelle + 1, 2, QTableWidgetItem(str(Const.DI.VparcelleTaille_Init[Parcelle])))
+            InTable.setItem(Parcelle + 1, 2, QTableWidgetItem(str(self.VparcelleTaille[Parcelle])))
 
         # On change:
         InTable.itemChanged.connect(self.InputChangedMethod)
