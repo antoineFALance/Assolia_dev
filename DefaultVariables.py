@@ -33,6 +33,22 @@ assert len(Const.VcultureIft_Init) == Const.NbCulture_Init
 Const.Vtypesol_Init = ['Coteaux', 'Plaines argilo-calcaires', 'Plaines boulbènes', 'Plaines irrigués']
 Const.NbTypeSol_Init = len(Const.Vtypesol_Init)
 
+Const.VcultureSol_Init = np.array([[50, 15, 30, 5],
+                                   [15, 15, 25, 5],
+                                   [15, 15, 25, 5],
+                                   [25, 10, 25, 5],
+                                   [15, 10, 25, 5]])
+assert len(Const.VcultureSol_Init) == Const.NbCulture_Init
+assert len(Const.VcultureSol_Init[0]) == Const.NbTypeSol_Init
+
+Const.VRotationN_1_Init = np.array([[50,  100, 100, 95,  95],
+                                    [100, 30,  70,  100, 100],
+                                    [100, 50,  50,  100, 100],
+                                    [100, 80,  80,  80,  80],
+                                    [100, 95,  95,  95,  95]])
+assert len(Const.VRotationN_1_Init) == Const.NbCulture_Init
+assert len(Const.VRotationN_1_Init[0]) == Const.NbCulture_Init
+
 Const.QttPailleMin_Init = 200
 Const.QttEnsilageMin_Init = 250
 Const.QttLuzerneMin_Init = 0
@@ -68,6 +84,9 @@ class DefaultInit:
 
         self.Vtypesol_Init = Const.Vtypesol_Init
         self.NbTypeSol_Init = Const.NbTypeSol_Init
+        self.VcultureSol_Init = Const.VcultureSol_Init
+
+        self.VRotationN_1_Init = Const.VRotationN_1_Init
 
         self.QttPailleMin_Init = Const.QttPailleMin_Init
         self.QttEnsilageMin_Init = Const.QttEnsilageMin_Init

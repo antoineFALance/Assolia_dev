@@ -97,10 +97,33 @@ class Ui_MainWindow_test(object):
         self.NbBestResultBox.setGeometry(QtCore.QRect(160, 440, 42, 25))
         self.NbBestResultBox.setObjectName("NbBestResultBox")
         self.tabWidget.addTab(self.ConfigTab, "")
+        self.HiddenConfigTab = QtWidgets.QWidget()
+        self.HiddenConfigTab.setObjectName("HiddenConfigTab")
+        self.ConfigCultureSolTable = QtWidgets.QTableWidget(self.HiddenConfigTab)
+        self.ConfigCultureSolTable.setGeometry(QtCore.QRect(0, 25, 452, 52))
+        self.ConfigCultureSolTable.setRowCount(1)
+        self.ConfigCultureSolTable.setColumnCount(2)
+        self.ConfigCultureSolTable.setObjectName("ConfigCultureSolTable")
+        self.ConfigCultureSolTable.horizontalHeader().setVisible(False)
+        self.ConfigCultureSolTable.verticalHeader().setVisible(False)
+        self.ConfigCultureSolText = QtWidgets.QTextEdit(self.HiddenConfigTab)
+        self.ConfigCultureSolText.setGeometry(QtCore.QRect(0, 0, 210, 25))
+        self.ConfigCultureSolText.setObjectName("ConfigCultureSolText")
+        self.ConfigRotationCultureN_1Text = QtWidgets.QTextEdit(self.HiddenConfigTab)
+        self.ConfigRotationCultureN_1Text.setGeometry(QtCore.QRect(0, 210, 210, 25))
+        self.ConfigRotationCultureN_1Text.setObjectName("ConfigRotationCultureN_1Text")
+        self.ConfigRotationCultureN_1Table = QtWidgets.QTableWidget(self.HiddenConfigTab)
+        self.ConfigRotationCultureN_1Table.setGeometry(QtCore.QRect(0, 235, 452, 52))
+        self.ConfigRotationCultureN_1Table.setRowCount(1)
+        self.ConfigRotationCultureN_1Table.setColumnCount(2)
+        self.ConfigRotationCultureN_1Table.setObjectName("ConfigRotationCultureN_1Table")
+        self.ConfigRotationCultureN_1Table.horizontalHeader().setVisible(False)
+        self.ConfigRotationCultureN_1Table.verticalHeader().setVisible(False)
+        self.tabWidget.addTab(self.HiddenConfigTab, "")
         self.OutputTab = QtWidgets.QWidget()
         self.OutputTab.setObjectName("OutputTab")
         self.OutputCultureTable = QtWidgets.QTableWidget(self.OutputTab)
-        self.OutputCultureTable.setGeometry(QtCore.QRect(0, 0, 402, 177))
+        self.OutputCultureTable.setGeometry(QtCore.QRect(0, 25, 402, 177))
         font = QtGui.QFont()
         font.setStyleStrategy(QtGui.QFont.PreferDefault)
         self.OutputCultureTable.setFont(font)
@@ -118,7 +141,7 @@ class Ui_MainWindow_test(object):
         self.OutputCultureTable.horizontalHeader().setVisible(False)
         self.OutputCultureTable.verticalHeader().setVisible(False)
         self.tableMarginConstraint = QtWidgets.QTableWidget(self.OutputTab)
-        self.tableMarginConstraint.setGeometry(QtCore.QRect(0, 176, 402, 77))
+        self.tableMarginConstraint.setGeometry(QtCore.QRect(0, 210, 402, 77))
         font = QtGui.QFont()
         font.setStyleStrategy(QtGui.QFont.PreferDefault)
         self.tableMarginConstraint.setFont(font)
@@ -135,11 +158,11 @@ class Ui_MainWindow_test(object):
         self.tableMarginConstraint.horizontalHeader().setVisible(False)
         self.tableMarginConstraint.verticalHeader().setVisible(False)
         self.IndexBestResultBox = QtWidgets.QSpinBox(self.OutputTab)
-        self.IndexBestResultBox.setGeometry(QtCore.QRect(610, 10, 42, 25))
+        self.IndexBestResultBox.setGeometry(QtCore.QRect(70, 0, 42, 25))
         self.IndexBestResultBox.setMaximum(4)
         self.IndexBestResultBox.setObjectName("IndexBestResultBox")
         self.IndexBestResultText = QtWidgets.QPlainTextEdit(self.OutputTab)
-        self.IndexBestResultText.setGeometry(QtCore.QRect(540, 10, 70, 25))
+        self.IndexBestResultText.setGeometry(QtCore.QRect(0, 0, 70, 25))
         self.IndexBestResultText.setObjectName("IndexBestResultText")
         self.tabWidget.addTab(self.OutputTab, "")
         self.StartCalculation = QtWidgets.QPushButton(self.centralwidget)
@@ -157,11 +180,14 @@ class Ui_MainWindow_test(object):
         MainWindow_test.setStatusBar(self.statusbar)
         self.actionExit = QtWidgets.QAction(MainWindow_test)
         self.actionExit.setObjectName("actionExit")
+        self.actionParametre_administrateur = QtWidgets.QAction(MainWindow_test)
+        self.actionParametre_administrateur.setObjectName("actionParametre_administrateur")
+        self.menuFile.addAction(self.actionParametre_administrateur)
         self.menuFile.addAction(self.actionExit)
         self.menubar.addAction(self.menuFile.menuAction())
 
         self.retranslateUi(MainWindow_test)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow_test)
 
     def retranslateUi(self, MainWindow_test):
@@ -187,6 +213,17 @@ class Ui_MainWindow_test(object):
 "<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Types de sols:</p></body></html>"))
         self.NbBestResultText.setPlainText(_translate("MainWindow_test", "Nombre de résultats finaux"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.ConfigTab), _translate("MainWindow_test", "Configuration"))
+        self.ConfigCultureSolText.setHtml(_translate("MainWindow_test", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Impact du type de sol sur les cultures:</p></body></html>"))
+        self.ConfigRotationCultureN_1Text.setHtml(_translate("MainWindow_test", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
+"<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
+"p, li { white-space: pre-wrap; }\n"
+"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\" margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\">Rotation (impact de n-1)</p></body></html>"))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.HiddenConfigTab), _translate("MainWindow_test", "Configuration cachée"))
         __sortingEnabled = self.OutputCultureTable.isSortingEnabled()
         self.OutputCultureTable.setSortingEnabled(False)
         self.OutputCultureTable.setSortingEnabled(__sortingEnabled)
@@ -198,6 +235,7 @@ class Ui_MainWindow_test(object):
         self.StartCalculation.setText(_translate("MainWindow_test", "Calculer"))
         self.menuFile.setTitle(_translate("MainWindow_test", "File"))
         self.actionExit.setText(_translate("MainWindow_test", "Exit"))
+        self.actionParametre_administrateur.setText(_translate("MainWindow_test", "Parametre administrateur"))
 
 
 if __name__ == "__main__":

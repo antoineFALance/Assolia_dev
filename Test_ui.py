@@ -1,3 +1,4 @@
+from fbs_runtime.application_context.PyQt5 import ApplicationContext
 from sys import argv as sys_argv, exit as sys_exit
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
@@ -8,15 +9,13 @@ from DefaultVariables import DefaultInit as DefaultVariablesInit, Const
 
 Const.RowSize = 25
 Const.ColumnSize = 90
-Const.MyApp = QtWidgets.QApplication(sys_argv)
+Const.MyAppCtx = ApplicationContext()
 Const.DI = DefaultVariablesInit()
-
-VOutput_ForTest = np.array([0])
 
 
 def ExitFunction():
     print("Exit")
-    Const.MyApp.quit()
+    Const.MyAppCtx.quit()
 
 
 # InitTable: Init a table with row and column number. Init also the size of table
@@ -31,6 +30,46 @@ def InitTable(Table, RowNb, CoulmnNb, CoordX, CoordY):
     for column in range(CoulmnNb):
         Table.setColumnWidth(column, Const.ColumnSize)
     Table.setGeometry(QtCore.QRect(CoordX, CoordY, CoulmnNb * Const.ColumnSize + 2, RowNb * Const.RowSize + 2))
+
+
+def DummyCalculation(**InputDictionary):
+    NbBestResult = InputDictionary["numBestResult"]
+    NbYear = InputDictionary["numYear"]
+    NbParcelle = len(InputDictionary["MPCn1"])
+    NbCulture = len(InputDictionary["MPCn1"][0])
+    MinPaille = InputDictionary["numPailleMin"]
+    MinEnsilage = InputDictionary["numEnsilageMin"]
+    MinLuzerne = InputDictionary["numLuzerneMin"]
+    CultureSimu = 1
+    Marge = 50000
+    StepMarge = 1
+    Ift = 3.0
+    StepIft = -0.01
+
+    OutputStructure = []
+    for Result in range(NbBestResult):
+        result_n_year = []
+
+        for Year in range(NbYear):
+            result_1_year_assol = np.zeros(NbParcelle)
+            for Parcelle in range(NbParcelle):
+                result_1_year_assol[Parcelle] = CultureSimu
+                CultureSimu = (CultureSimu + 1) % NbCulture
+            result_1_year_other = np.array([Marge, Ift, MinPaille, MinEnsilage, MinLuzerne])
+            Marge += StepMarge
+            Ift += StepIft
+            result_1_year = [result_1_year_assol, result_1_year_other]
+
+            result_n_year.append(result_1_year)
+        result_n_year_other_average = np.array([Marge, Ift, MinPaille, MinEnsilage, MinLuzerne])
+        Marge += StepMarge
+        Ift += StepIft
+        result_n_year_with_average = [result_n_year, result_n_year_other_average]
+
+        OutputStructure.append(result_n_year_with_average)
+        print(OutputStructure[Result])
+
+    return OutputStructure
 
 
 class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
@@ -63,6 +102,9 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
         self.Vtypesol = Const.DI.Vtypesol_Init
         self.NbTypeSol = Const.DI.NbTypeSol_Init
+        self.VcultureSol = Const.DI.VcultureSol_Init
+
+        self.VRotationN_1 = Const.DI.VRotationN_1_Init
 
         self.QttPailleMin = Const.DI.QttPailleMin_Init
         self.QttEnsilageMin = Const.DI.QttEnsilageMin_Init
@@ -74,20 +116,30 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
         self.VparcelleCulture_N_1 = Const.DI.VparcelleCulture_N_1_Init
 
+        self.ConfigParameterTab = self.ui.tabWidget.widget(2)
+
         # start with empty dictionary for the input of the model
         self.ModelInput = {}
+        self.ModelOutput = []
 
         self.InitMenu()
         self.InitAllTab()
 
     def InitMenu(self):
         self.ui.Close_test.clicked.connect(ExitFunction)
+        self.ui.actionParametre_administrateur.triggered.connect(self.AdminRequested)
         self.ui.actionExit.triggered.connect(ExitFunction)
         self.ui.StartCalculation.clicked.connect(self.OnClick_StartCalculation)
+
+    def AdminRequested(self):
+        self.ui.tabWidget.addTab(self.ConfigParameterTab, "Configuration cachée")
 
     def InitAllTab(self):
         # Init config tab
         self.InitConfigTab()
+
+        # Init hidden config tab
+        self.InitHiddenConfigTab()
 
         # Init Input table:
         self.InitInputTab()
@@ -104,8 +156,8 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         Geometrie = ConfCultureTable.geometry()
         Geometrie.setWidth(Geometrie.width() + 150 - Const.ColumnSize)
         ConfCultureTable.setGeometry(Geometrie)
-        # Header
         ConfCultureTable.setColumnWidth(0, 150)
+        # Header
         ConfCultureTable.setItem(0, 0, QTableWidgetItem("Culture"))
         ConfCultureTable.setItem(1, 0, QTableWidgetItem("Rdt (t/ha)"))
         ConfCultureTable.setItem(2, 0, QTableWidgetItem("Prix de vente (€/t)"))
@@ -203,11 +255,75 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     # OnChange_NbYearSimulationBox: Method called on change event in NbYearSimulationBox
     def OnChange_NbYearSimulationBox(self):
         self.NbAnneeSimulee = self.ui.NbYearSimulationBox.value()
+        self.InitCultureOutputTable(self.ui.OutputCultureTable)
+        self.InitReportOutputTable(self.ui.tableMarginConstraint)
 
     # OnChange_NbBestResultBox: Method called on change event in NbBestResultBox
     def OnChange_NbBestResultBox(self):
         self.NbBestResult = self.ui.NbBestResultBox.value()
         self.ui.IndexBestResultBox.setMaximum(self.NbBestResult - 1)
+
+    # InitHiddenConfigTab: Init hidden config tab
+    def InitHiddenConfigTab(self):
+        ConfigCultureSolTable = self.ui.ConfigCultureSolTable
+        InitTable(ConfigCultureSolTable, self.NbTypeSol + 1, self.NbCulture + 1, 0, 25)
+        Geometrie = ConfigCultureSolTable.geometry()
+        Geometrie.setWidth(Geometrie.width() + 150 - Const.ColumnSize)
+        ConfigCultureSolTable.setGeometry(Geometrie)
+        ConfigCultureSolTable.setColumnWidth(0, 150)
+        # Header
+        for Sol in range(self.NbTypeSol):
+            ConfigCultureSolTable.setItem(Sol + 1, 0, QTableWidgetItem(self.Vtypesol[Sol]))
+        for Culture in range(self.NbCulture):
+            ConfigCultureSolTable.setItem(0, Culture + 1, QTableWidgetItem(self.Vculture[Culture]))
+
+        for Sol in range(self.NbTypeSol):
+            for Culture in range(self.NbCulture):
+                ConfigCultureSolTable.setItem(Sol + 1, Culture + 1,
+                                              QTableWidgetItem(str(self.VcultureSol[Culture][Sol])))
+
+        # ConfigRotationCultureN_1Text
+        Geometrie = self.ui.ConfigRotationCultureN_1Text.geometry()
+        Geometrie.setY(25 * (self.NbTypeSol + 2) + 12)
+        Geometrie.setHeight(25)
+        self.ui.ConfigRotationCultureN_1Text.setGeometry(Geometrie)
+        # ConfTypeSolTable
+        RotationCultureN_1Table = self.ui.ConfigRotationCultureN_1Table
+        InitTable(RotationCultureN_1Table, self.NbCulture + 1, self.NbCulture + 1, 0, 25 * (self.NbTypeSol + 3) + 12)
+
+        # Header row and column with culture names
+        for Culture in range(self.NbCulture):
+            RotationCultureN_1Table.setItem(0, Culture + 1, QTableWidgetItem("n " + self.Vculture[Culture]))
+            RotationCultureN_1Table.setItem(Culture + 1, 0, QTableWidgetItem("n-1 " + self.Vculture[Culture]))
+
+        # Init table
+        for CultureN in range(self.NbCulture):
+            for CultureN_1 in range(self.NbCulture):
+                RotationCultureN_1Table.setItem(CultureN + 1, CultureN_1 + 1,
+                                                QTableWidgetItem(str(self.VRotationN_1[CultureN][CultureN_1])))
+
+        # On change
+        ConfigCultureSolTable.itemChanged.connect(self.OnChange_ConfigCultureSolTable)
+        RotationCultureN_1Table.itemChanged.connect(self.OnChange_RotationCultureN_1Table)
+
+        # self.ui.tabWidget.setTabEnabled(2, False)
+        self.ui.tabWidget.removeTab(2)
+
+    # OnChange_ConfigCultureSolTable: Method called on change event on ConfigCultureSolTable
+    def OnChange_ConfigCultureSolTable(self):
+        ConfigCultureSolTable = self.ui.ConfigCultureSolTable
+        row = ConfigCultureSolTable.currentRow()
+        col = ConfigCultureSolTable.currentColumn()
+        if row != 0 and col != 0:
+            self.VcultureSol[col - 1][row - 1] = int(ConfigCultureSolTable.item(row, col).text())
+
+    # OnChange_RotationCultureN_1Table: Method called on change event on ConfigRotationCultureN_1Table
+    def OnChange_RotationCultureN_1Table(self):
+        RotationCultureN_1Table = self.ui.ConfigRotationCultureN_1Table
+        row = RotationCultureN_1Table.currentRow()
+        col = RotationCultureN_1Table.currentColumn()
+        if row != 0 and col != 0:
+            self.VRotationN_1[row - 1][col - 1] = int(RotationCultureN_1Table.item(row, col).text())
 
     def FillVparcelleCulture_N_1_ForTest(self):
         Culture = 0
@@ -299,7 +415,6 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     # InitOutputTab: Init tables in tab "Résultats"
     def InitOutputTab(self):
         self.InitCultureOutputTable(self.ui.OutputCultureTable)
-        self.FillOutputTable()  # TODO: Remove this line as soon as calculation algorithm is connected.
         self.InitReportOutputTable(self.ui.tableMarginConstraint)
         self.ui.IndexBestResultBox.setMaximum(self.NbBestResult - 1)
         self.ui.IndexBestResultBox.valueChanged.connect(self.FillOutputTable)
@@ -307,7 +422,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     # InitCultureOutputTable: Init culture output table with header
     def InitCultureOutputTable(self, CultOutTab):
         # Set culture output table
-        InitTable(CultOutTab, self.NbParcelle + 1, self.NbAnneeSimulee + 2, 0, 0)
+        InitTable(CultOutTab, self.NbParcelle + 1, self.NbAnneeSimulee + 2, 0, 25)
         # Fill Column header with {Parcelle, n-1, n, ..., n + x} with x = NbAnneeSimulee - 1
         CultOutTab.setItem(0, 0, QTableWidgetItem("Parcelle"))
         CultOutTab.setItem(0, 1, QTableWidgetItem("n - 1"))
@@ -324,35 +439,33 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     # InitReportOutputTable: Init report table with header
     def InitReportOutputTable(self, OutReportTab):
         # Set Margin and constraint table
-        InitTable(OutReportTab, 3, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 1) * Const.RowSize + 2)
+        InitTable(OutReportTab, 4, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 2) * Const.RowSize + 2)
         # Fill Row header
         OutReportTab.setItem(0, 0, QTableWidgetItem("Marge"))
-        OutReportTab.setItem(1, 0, QTableWidgetItem("Qtt paille"))
-        OutReportTab.setItem(2, 0, QTableWidgetItem("Qtt ensilage"))
-
-    def FillVOutput_ForTest(self, NbAnnees, NbParcelle, NbBestResult):
-        culture = 0
-        VOutput_ForTest.resize((NbBestResult, NbAnnees, NbParcelle))
-        for NumResult in range(NbBestResult):
-            for Year in range(NbAnnees):
-                for Parcelle in range(NbParcelle):
-                    culture = (culture + 1) % self.NbCulture
-                    VOutput_ForTest[NumResult][Year][Parcelle] = culture
+        OutReportTab.setItem(1, 0, QTableWidgetItem("Ift"))
+        OutReportTab.setItem(2, 0, QTableWidgetItem("Qtt paille"))
+        OutReportTab.setItem(3, 0, QTableWidgetItem("Qtt ensilage"))
+        OutReportTab.setItem(4, 0, QTableWidgetItem("Qtt luzerne"))
 
     # FillOutputTable: Fill the output table with culture associated with
     def FillOutputTable(self):
         CultOutTab = self.ui.OutputCultureTable
-        self.FillVOutput_ForTest(self.NbAnneeSimulee, self.NbParcelle, self.NbBestResult)
+        MarginConstraintTable = self.ui.tableMarginConstraint
         IndexBestResult = self.ui.IndexBestResultBox.value()
         for Year in range(self.NbAnneeSimulee):
             for Parcelle in range(self.NbParcelle):
-                index = VOutput_ForTest[IndexBestResult][Year][Parcelle]
+                index = int(self.ModelOutput[IndexBestResult][0][Year][0][Parcelle])
                 CultOutTab.setItem(Parcelle + 1, Year + 2,
                                    QTableWidgetItem(self.Vculture[index]))
+            for i in range(5):
+                value = self.ModelOutput[IndexBestResult][0][Year][1][i]
+                MarginConstraintTable.setItem(i, Year + 2, QTableWidgetItem(str(value)))
 
     # OnClick_StartCalculation: Method to start calculation.
     def OnClick_StartCalculation(self):
         self.WrapperModelInput()
+        self.ModelOutput = DummyCalculation(**self.ModelInput)
+        self.FillOutputTable()
 
     def WrapperModelInput(self):
         # Format MPCn1
@@ -441,10 +554,20 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         # print("IftCulture = ")
         # print(self.ModelInput["IftCulture"])
 
+        # Format impact of sol on culture
+        self.ModelInput["R1"] = self.VcultureSol
+        # print("R1 = ")
+        # print(self.ModelInput["R1"])
+
+        # Format culture rotation n-1
+        self.ModelInput["R2"] = self.VRotationN_1
+        # print("R2 = ")
+        # print(self.ModelInput["R2"])
+
 
 if __name__ == "__main__":
     # Instantiation du Main
     TestApp = TestWindow()
     TestApp.show()
 
-    sys_exit(Const.MyApp.exec_())
+    sys_exit(Const.MyAppCtx.exec_())
