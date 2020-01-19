@@ -16,6 +16,7 @@ start_time_2 = time.clock()
 solverMode = 'unconstrained IFT'
 kIft=0.0
 resultSelectionMode = 'MB'
+#
 
 #Déclaration des constantes
 
