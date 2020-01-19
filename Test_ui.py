@@ -1,4 +1,3 @@
-
 from sys import argv as sys_arg, exit as sys_exit
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
@@ -15,7 +14,7 @@ Const.DI = DefaultVariablesInit()
 
 def ExitFunction():
     print("Exit")
-    Const.MyAppCtx.app.quit()
+    Const.MyApp.quit()
 
 
 # InitTable: Init a table with row and column number. Init also the size of table
