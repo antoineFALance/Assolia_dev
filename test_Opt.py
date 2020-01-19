@@ -110,6 +110,7 @@ for index in indexCultureEnsilage:
 
 
 
+
 yearSolutionRepartition,yearSolutionValue,yearIftSolutionValue=[],[],[]
 for indexYear in range(numYear):
     print("ANNEE "+str(indexYear))
