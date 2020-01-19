@@ -1,5 +1,5 @@
-from fbs_runtime.application_context.PyQt5 import ApplicationContext
-from sys import argv as sys_argv, exit as sys_exit
+
+from sys import argv as sys_arg, exit as sys_exit
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QTableWidgetItem
@@ -9,13 +9,13 @@ from DefaultVariables import DefaultInit as DefaultVariablesInit, Const
 
 Const.RowSize = 25
 Const.ColumnSize = 90
-Const.MyAppCtx = ApplicationContext()
+Const.MyApp = QtWidgets.QApplication(sys_arg)
 Const.DI = DefaultVariablesInit()
 
 
 def ExitFunction():
     print("Exit")
-    Const.MyAppCtx.quit()
+    Const.MyAppCtx.app.quit()
 
 
 # InitTable: Init a table with row and column number. Init also the size of table
@@ -67,7 +67,7 @@ def DummyCalculation(**InputDictionary):
         result_n_year_with_average = [result_n_year, result_n_year_other_average]
 
         OutputStructure.append(result_n_year_with_average)
-        print(OutputStructure[Result])
+        # print(OutputStructure[Result])
 
     return OutputStructure
 
@@ -570,4 +570,4 @@ if __name__ == "__main__":
     TestApp = TestWindow()
     TestApp.show()
 
-    sys_exit(Const.MyAppCtx.exec_())
+    sys_exit(Const.MyApp.exec_())

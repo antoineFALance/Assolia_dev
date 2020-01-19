@@ -21,9 +21,9 @@ Const.VculturePrice_Init = np.array([350, 200, 150, 150, 400])
 assert len(Const.VculturePrice_Init) == Const.NbCulture_Init
 Const.VcultureProdPrice_Init = np.array([400, 600, 400, 1200, 300])
 assert len(Const.VcultureProdPrice_Init) == Const.NbCulture_Init
-Const.VredementCulturePaille_Init = np.array([0, 6.4, 5.6, 0, 0])
+Const.VredementCulturePaille_Init = np.array([0, 1, 1, 0, 0])
 assert len(Const.VredementCulturePaille_Init) == Const.NbCulture_Init
-Const.VredementCultureEnsilage_Init = np.array([0, 0, 0, 19.5, 0])
+Const.VredementCultureEnsilage_Init = np.array([0, 0, 0, 1, 0])
 assert len(Const.VredementCulturePaille_Init) == Const.NbCulture_Init
 Const.VredementCultureLuzerne_Init = np.array([0, 0, 0, 0, 0])
 assert len(Const.VredementCultureLuzerne_Init) == Const.NbCulture_Init
