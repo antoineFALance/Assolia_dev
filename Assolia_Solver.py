@@ -8,39 +8,44 @@ from skcriteria import Data, MIN, MAX
 from skcriteria.madm import closeness, simple
 from scipy.spatial.distance import euclidean as dist_euclid
 
-class Solver:
-    def __init__(self):
-        self.solverMode='unconstrained IFT'
-        self.selectionMode='Max MB'
-        self.kIFT = 0
-        self.cultureList=[]
-        self.parcelleList=[]
-        self.nbParcelle = 0
-        self.NbCulture = 0
-        self.constraintPaille=0
-        self.constraintEnsilage=0
-        self.numSolutionYear = 5
-        self.numYear = 6
-        self.MCDAweight = [1, 1]
-        self.eta = np.array([])
-        self.ift = np.array([])
-        self.surface = np.array([])
-        self.prixVenteCulture = np.array([])
-        self.coutProdCulture = np.array([])
-        self.MPTS = np.array([])
-        self.R1 = np.array([])
-        self.R2 = np.array([])
+class objectSolver:
+    def __init__(self,solverMode='unconstrained IFT',selectionMode='Max MB',kIFT=0.01,cultureList=[],parcelleList=[],constraintPaille=0,constraintEnsilage=0,numSolutionYear=0,numYear=0,MCDAweight=[],eta=np.array([]),ift=np.array([]),surface=[],prixVenteCulture=[],coutProdCulture=[],MPTS=np.array([]),MPCn1 = np.array([]),R1=np.array([]),R2=np.array([])):
 
-    def IFTmatrix(self,nbParcelle,nbCulture,surface,ift):
+        self.solverMode=solverMode
+        self.selectionMode=selectionMode
+        self.kIft = kIFT
+        self.cultureList=cultureList
+        self.parcelleList=parcelleList
+        self.nbParcelle = len(parcelleList)
+        self.nbCulture = len(cultureList)
+        self.constraintPaille=constraintPaille
+        self.constraintEnsilage=constraintEnsilage
+        self.numSolutionYear = numSolutionYear
+        self.numYear = numYear
+        self.MCDAweight = MCDAweight
+        self.eta = eta
+        self.ift = ift
+        self.surface = surface
+        self.prixVenteCulture = prixVenteCulture
+        self.coutProdCulture = coutProdCulture
+        self.MPTS = MPTS
+        self.R1 = R1
+        self.R2 = R2,
+        self.MPCn1=MPCn1
+        self.iftMatrix=self.functionIFTmatrix(nbParcelle=self.nbParcelle,nbCulture=self.nbCulture,surface=self.surface,ift=self.ift)
+        self.weightIFT=self.functionWeightIFT(iftMatrix=self.iftMatrix)
+        self.lambdaPaille = self.functionLambdaPaille(Vculture=cultureList,nbCulture=self.nbCulture)
+        self.lambdaEnsilage = self.functionLambdaEnsilage(Vculture=self.cultureList,nbCulture=self.nbCulture)
+
+    def functionIFTmatrix(self,nbParcelle,nbCulture,surface,ift):
         iftMatrix = np.zeros((nbParcelle, nbCulture))
         for i in range(nbParcelle):
             for j in range(nbCulture):
                 iftMatrix[i][j] = ift[j] * surface[i] / sum(surface)
-
         return iftMatrix
 
     # Coefficient pondération IFT
-    def weightIFT(self,iftMatrix):
+    def functionWeightIFT(self,iftMatrix):
         weightIFT = []
         for row in iftMatrix:
             for coefficent in row:
@@ -48,7 +53,7 @@ class Solver:
         return weightIFT
 
 
-    def lambdaPaille(self,Vculture,nbCulture):
+    def functionLambdaPaille(self,Vculture,nbCulture):
         # Construction matrice Lambda paille
         indexCulturePaille = []
         for culture in Vculture:
@@ -61,7 +66,7 @@ class Solver:
         return lambdaPaille
 
     # Construction matrice Lambda ensilage
-    def lambdaEnsilage(self,Vculture,nbCulture):
+    def functionLambdaEnsilage(self,Vculture,nbCulture):
         indexCultureEnsilage = []
         for culture in Vculture:
             if culture == 'Maïs':
@@ -69,52 +74,55 @@ class Solver:
         lambdaEnsilage = np.zeros((nbCulture, nbCulture))
         for index in indexCultureEnsilage:
             lambdaEnsilage[index][index] = 1
+        return lambdaEnsilage
 
+    def functionOptimization(self):
 
-    def optimization(self,numYear,MPCn1,nbParcelle,nbCulture,eta,R1,R2,MPTS,surface,prixVenteCulture,coutProdCulture,ift,numSolutionYear,weightIFT,numPailleMin,numEnsilageMin,kIft):
         yearSolutionRepartition, yearSolutionValue, yearIftSolutionValue = [], [], []
-        for indexYear in range(numYear):
+        for indexYear in range(self.numYear):
             print("ANNEE " + str(indexYear))
             solutionRepartition, solutionValue, iftValue = [], [], []
 
             if indexYear == 0:
-                initRepartition = [MPCn1]
+                initRepartition = [self.MPCn1]
 
             for cultureRepartition in initRepartition:
 
                 # 1.Contruction matrice etap
-                etap = np.zeros((nbParcelle, nbCulture))
-                for i in range(nbCulture):
-                    for j in range(nbParcelle):
-                        etap[j][i] = eta[i]
+                etap = np.zeros((self.nbParcelle, self.nbCulture))
+                for i in range(self.nbCulture):
+                    for j in range(self.nbParcelle):
+                        etap[j][i] = self.eta[i]
                 # print(etap)
 
                 # 2.Construction de la matrice eta_ts
 
-                eta_ts = np.ones((nbParcelle, nbCulture)) - 1 / 100 * (np.transpose(np.matmul(R1, np.transpose(MPTS))))
+                eta_ts = np.ones((self.nbParcelle, self.nbCulture)) - 1 / 100 * (np.transpose(np.matmul(self.R1, np.transpose(self.MPTS))))
                 # print(eta_ts)
 
                 # 3.Construction de la matrice eta_n1
-                eta_n1 = 1 / 100 * np.matmul(cultureRepartition, R2)
+
+                eta_n1 = 1 / 100 * np.matmul(cultureRepartition, self.R2)[0]
                 # print("n1")
                 # print(eta_n1)
 
                 # 4.Construction de la matrice etaG
-                etaG = np.zeros((nbParcelle, nbCulture))
-                Marge = np.zeros((nbParcelle, nbCulture))
-                for i in range(nbCulture):
-                    for j in range(nbParcelle):
+                etaG = np.zeros((self.nbParcelle, self.nbCulture))
+                Marge = np.zeros((self.nbParcelle, self.nbCulture))
+
+                for i in range(self.nbCulture):
+                    for j in range(self.nbParcelle):
                         etaG[j][i] = etap[j][i] * eta_ts[j][i] * eta_n1[j][i]
 
                 # Construction de la matrice/liste des eta Paille
-                etaPaille, etaEnsilage = np.zeros((nbParcelle, nbCulture)), np.zeros((nbParcelle, nbCulture))
+                etaPaille, etaEnsilage = np.zeros((self.nbParcelle, self.nbCulture)), np.zeros((self.nbParcelle, self.nbCulture))
                 weightPaille, weightEnsilage = [], []
-                for i in range(nbParcelle):
-                    for j in range(nbCulture):
+                for i in range(self.nbParcelle):
+                    for j in range(self.nbCulture):
                         if j in (1, 2):
-                            etaPaille[i][j] = 0.8 * etaG[i][j] * surface[i]
+                            etaPaille[i][j] = 0.8 * etaG[i][j] * self.surface[i]
                         elif j == 3:
-                            etaEnsilage[i][j] = 1.5 * etaG[i][j] * surface[i]
+                            etaEnsilage[i][j] = 1.5 * etaG[i][j] * self.surface[i]
 
                 for row in etaPaille:
                     for element in row:
@@ -129,21 +137,21 @@ class Solver:
 
 
                 # 5.Matrice Prix culture/parcelle
-                Pv = np.zeros((nbParcelle, nbCulture))
-                Ct = np.zeros((nbParcelle, nbCulture))
-                for i in range(nbCulture):
-                    for j in range(nbParcelle):
-                        Pv[j][i] = prixVenteCulture[i]
-                        Ct[j][i] = coutProdCulture[i]
+                Pv = np.zeros((self.nbParcelle, self.nbCulture))
+                Ct = np.zeros((self.nbParcelle, self.nbCulture))
+                for i in range(self.nbCulture):
+                    for j in range(self.nbParcelle):
+                        Pv[j][i] = self.prixVenteCulture[i]
+                        Ct[j][i] = self.coutProdCulture[i]
                 # print(Pv)
                 # print(Ct)
 
                 # 6.Matrice de marge
-                Mg = np.zeros((nbParcelle, nbCulture))
-                for i in range(nbCulture):
-                    for j in range(nbParcelle):
+                Mg = np.zeros((self.nbParcelle, self.nbCulture))
+                for i in range(self.nbCulture):
+                    for j in range(self.nbParcelle):
                         # Mg[j][i]=surface[j]*(etaG[j][i]*Pv[j][i]-Ct[j][i])
-                        Mg[j][i] = surface[j] * eta_n1[j][i] * (etap[j][i] * eta_ts[j][i] * Pv[j][i] - Ct[j][i])
+                        Mg[j][i] = self.surface[j] * eta_n1[j][i] * (etap[j][i] * eta_ts[j][i] * Pv[j][i] - Ct[j][i])
                 # print(Mg)
 
                 # Coefficient pondération calcul Marge Brute
@@ -154,20 +162,20 @@ class Solver:
 
                 # 7.Matrice des contraintes
 
-                constMatrix1 = np.zeros((nbParcelle, nbParcelle * nbCulture))
-                for i in range(nbParcelle):
-                    for j in range(nbParcelle * nbCulture):
-                        if nbCulture * i <= j <= nbCulture * (i + 1) - 1:
+                constMatrix1 = np.zeros((self.nbParcelle, self.nbParcelle * self.nbCulture))
+                for i in range(self.nbParcelle):
+                    for j in range(self.nbParcelle * self.nbCulture):
+                        if self.nbCulture * i <= j <= self.nbCulture * (i + 1) - 1:
                             constMatrix1[i][j] = 1
 
-                iftRepartition = np.matmul(cultureRepartition, ift)
+                iftRepartition = np.matmul(cultureRepartition, self.ift)
 
                 constMatrix2 = np.array(weightPaille)
                 constMatrix3 = np.array(weightEnsilage)
-                constMatrix = np.vstack((constMatrix1, constMatrix2, constMatrix3, np.array(weightIFT)))
+                constMatrix = np.vstack((constMatrix1, constMatrix2, constMatrix3, np.array(self.weightIFT)))
 
                 solutionConstraintList, solutionBoundList = [], []
-                for indexSolution in range(numSolutionYear):
+                for indexSolution in range(self.numSolutionYear):
 
                     if indexSolution >= 1:
                         constMatrix = np.vstack((constMatrix, np.array(solutionConstraintList[indexSolution - 1])))
@@ -175,7 +183,7 @@ class Solver:
                     #
                     # print("MATRICE CONTRAINTES")
                     # print(constMatrix)
-                    numvar = nbCulture * nbParcelle
+                    numvar = self.nbCulture * self.nbParcelle
                     numConstraints = len(constMatrix)
                     # print("NUMCONSTRAINTS")
                     # print(numConstraints)
@@ -197,15 +205,15 @@ class Solver:
                             bound_sup.append(1)
                             bound_inf.append(1)
                         elif indexBound == 6:
-                            bound_inf.append(numPailleMin)
-                            bound_sup.append(100 * numPailleMin)
+                            bound_inf.append(self.constraintPaille)
+                            bound_sup.append(100 * self.constraintPaille)
                         elif indexBound == 7:
-                            bound_inf.append(numEnsilageMin)
-                            bound_sup.append(100 * numEnsilageMin)
+                            bound_inf.append(self.constraintEnsilage)
+                            bound_sup.append(100 * self.constraintEnsilage)
                         else:
                             bound_sup.append(
-                                sum(map(lambda IFTi, Si: IFTi * Si, iftRepartition, surface)) / sum(surface) * (
-                                1 - kIft))
+                                sum(map(lambda IFTi, Si: IFTi * Si, iftRepartition, self.surface)) / sum(self.surface) * (
+                                1 - self.kIft))
                             bound_inf.append(0)
                             if indexSolution >= 1:
                                 for indexSolBound in range(len(solutionBoundList)):
@@ -254,14 +262,14 @@ class Solver:
                         # print("SOLUTION N° "+str(indexSolution)+" ANNEE "+str(indexYear))
                         # print("REPARTITION")
 
-                        repartition = np.vstack((np.array_split(solution, nbParcelle)))
+                        repartition = np.vstack((np.array_split(solution, self.nbParcelle)))
 
                         solutionRepartition.append(repartition)
                         # print(repartition)
                         # print("SOLUTION")
                         marge_brute_optimale = solver.Objective().Value()
                         solutionValue.append(marge_brute_optimale)
-                        iftValue.append(sum(np.matmul(repartition, ift) * surface) / sum(surface))
+                        iftValue.append(sum(np.matmul(repartition, self.ift) * self.surface) / sum(self.surface))
                         # print(solver.Objective().Value())
                         # print('IFT')
                         # print(iftValue)
@@ -285,9 +293,9 @@ class Solver:
                     else:
                         # print('The problem does not have an optimal solution.')
                         solutionConstraint, solutionBound = [], []
-                        solution = [0] * nbCulture * nbParcelle
+                        solution = [0] * self.nbCulture * self.nbParcelle
 
-                        repartition = np.zeros((nbParcelle, nbCulture))
+                        repartition = np.zeros((self.nbParcelle, self.nbCulture))
                         solutionRepartition.append(repartition)
                         solutionValue.append(0)
                         iftValue.append(0)
@@ -307,12 +315,12 @@ class Solver:
         # Création de la matrice des résultats
         listMatrix, colMatrix, iftTable = [], [], []
 
-        for indexYear in range(numYear):
-            LambdaLocal = np.zeros((numSolutionYear ** (indexYear + 1), numSolutionYear ** numYear))
-            for i in range((numSolutionYear) ** (indexYear + 1)):
-                for j in range(numSolutionYear ** numYear):
-                    if i * (numSolutionYear) ** (numYear - (indexYear + 1)) <= j <= (i + 1) * numSolutionYear ** (
-                        numYear - (indexYear + 1)) - 1:
+        for indexYear in range(self.numYear):
+            LambdaLocal = np.zeros((self.numSolutionYear ** (indexYear + 1), self.numSolutionYear ** self.numYear))
+            for i in range((self.numSolutionYear) ** (indexYear + 1)):
+                for j in range(self.numSolutionYear ** self.numYear):
+                    if i * (self.numSolutionYear) ** (self.numYear - (indexYear + 1)) <= j <= (i + 1) * self.numSolutionYear ** (
+                        self.numYear - (indexYear + 1)) - 1:
                         LambdaLocal[i][j] = 1
 
             listMatrix.append(LambdaLocal)
@@ -342,8 +350,8 @@ class Solver:
         dfMCDA['MB_Norm'] = dfMCDA.apply(lambda row: row.MB2 / row.MB2Sum, axis=1)
         dfMCDA['IFT_Norm'] = dfMCDA.apply(lambda row: row.IFT2 / row.IFT2Sum, axis=1)
 
-        dfMCDA['MBNormWeighted'] = dfMCDA.apply(lambda row: row.MB_Norm * MCDAweight[0], axis=1)
-        dfMCDA['IFTNormWeighted'] = dfMCDA.apply(lambda row: row.IFT_Norm * MCDAweight[1], axis=1)
+        dfMCDA['MBNormWeighted'] = dfMCDA.apply(lambda row: row.MB_Norm * self.MCDAweight[0], axis=1)
+        dfMCDA['IFTNormWeighted'] = dfMCDA.apply(lambda row: row.IFT_Norm * self.MCDAweight[1], axis=1)
 
         dfMCDA['MB_ideal'] = dfMCDA.apply(lambda row: dfMCDA['MBNormWeighted'].max(), axis=1)
         dfMCDA['MB_anti_ideal'] = dfMCDA.apply(lambda row: dfMCDA['MBNormWeighted'].min(), axis=1)
