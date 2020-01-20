@@ -55,7 +55,7 @@ Const.QttLuzerneMin_Init = 0
 
 Const.NbSimuPerYear_Init = 3
 Const.NbAnneeSimulee_Init = 3
-Const.NbBestResult_Init = 3
+Const.NbBestResult_Init = 1
 
 Const.VparcelleCulture_N_1_Init = np.array([1, 2, 4, 3, 0, 1])
 assert len(Const.VparcelleCulture_N_1_Init) == Const.NbParcelle_Init

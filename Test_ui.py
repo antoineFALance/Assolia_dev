@@ -2,9 +2,11 @@ from sys import argv as sys_arg, exit as sys_exit
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QTableWidgetItem
+import sqlite3 as sql
 
 # Initialisation of variables to be used in case that there is no file to open.
 from DefaultVariables import DefaultInit as DefaultVariablesInit, Const
+import Assolia_Solver as A_solver
 
 Const.RowSize = 25
 Const.ColumnSize = 90
@@ -32,13 +34,14 @@ def InitTable(Table, RowNb, CoulmnNb, CoordX, CoordY):
 
 
 def DummyCalculation(**InputDictionary):
-    NbBestResult = InputDictionary["numBestResult"]
-    NbYear = InputDictionary["numYear"]
-    NbParcelle = len(InputDictionary["MPCn1"])
-    NbCulture = len(InputDictionary["MPCn1"][0])
-    MinPaille = InputDictionary["numPailleMin"]
-    MinEnsilage = InputDictionary["numEnsilageMin"]
-    MinLuzerne = InputDictionary["numLuzerneMin"]
+    NbBestResult = InputDictionary.get("numBestResult", Const.DI.NbBestResult_Init)
+    NbYear = InputDictionary.get("numYear", Const.DI.NbAnneeSimulee_Init)
+    VparcelleCulture = InputDictionary.get("MPCn1", Const.DI.VparcelleCulture_N_1_Init)
+    NbParcelle = len(VparcelleCulture)
+    NbCulture = len(VparcelleCulture[0])
+    MinPaille = InputDictionary.get("numPailleMin", Const.DI.QttPailleMin_Init)
+    MinEnsilage = InputDictionary.get("numEnsilageMin", Const.DI.QttEnsilageMin_Init)
+    MinLuzerne = InputDictionary.get("numLuzerneMin", Const.DI.QttLuzerneMin_Init)
     CultureSimu = 1
     Marge = 50000
     StepMarge = 1
@@ -69,6 +72,13 @@ def DummyCalculation(**InputDictionary):
         # print(OutputStructure[Result])
 
     return OutputStructure
+
+
+def fetchall_column(rows):
+    Column = []
+    for row in rows:
+        Column.append(row[0])
+    return Column
 
 
 class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
@@ -119,10 +129,91 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
         # start with empty dictionary for the input of the model
         self.ModelInput = {}
+        self.solver = A_solver.objectSolver(**self.ModelInput)
         self.ModelOutput = []
+
+        # self.VdbTypeSolId = []
+        # self.db = sql.connect('Assolia_Default.db')
+        # self.LoadDataBase()
 
         self.InitMenu()
         self.InitAllTab()
+
+    # def LoadDataBase(self):
+    #     # Load data base
+    #     self.db.row_factory = sql.Row
+    #     cursor = self.db.cursor()
+    #     cursor.execute("""SELECT lb_type_sol FROM ref_type_sol""")
+    #     self.Vtypesol = fetchall_column(cursor.fetchall())
+    #     self.NbTypeSol = len(self.Vtypesol)
+    #     cursor.execute("""SELECT lb_type_sol FROM ref_type_sol""")
+    #     self.Vtypesol = fetchall_column(cursor.fetchall())
+    #     self.NbTypeSol = len(self.Vtypesol)
+    #     print("type sol = ")
+    #     print(self.Vtypesol)
+    #     print(self.NbTypeSol)
+    #     cursor.execute("""SELECT lb_parcelle FROM ref_parcelle""")
+    #     self.Vparcelle = fetchall_column(cursor.fetchall())
+    #     self.NbParcelle = len(self.Vparcelle)
+    #     print("Parcelle = ")
+    #     print(self.Vparcelle)
+    #     print(self.NbParcelle)
+    #     cursor.execute("""SELECT id_type_sol FROM ref_parcelle""")
+    #     self.VparcelleTypeSol = fetchall_column(cursor.fetchall())
+    #     # TODO: vérifier ça.
+    #     for i in range(self.NbParcelle):
+    #         self.VparcelleTypeSol[i] -= 1
+    #     print("Parcelle type sol = ")
+    #     print(self.VparcelleTypeSol)
+    #     cursor.execute("""SELECT num_surface FROM ref_parcelle""")
+    #     self.VparcelleTaille = fetchall_column(cursor.fetchall())
+    #     print("Parcelle taille = ")
+    #     print(self.VparcelleTaille)
+    #     cursor.execute("""SELECT lb_culture FROM ref_culture""")
+    #     self.Vculture = fetchall_column(cursor.fetchall())
+    #     # TODO: Remettre la longueur de la culture
+    #     # self.NbCulture = len(self.Vculture)
+    #     print("Culture = ")
+    #     print(self.Vculture)
+    #     print(self.NbCulture)
+    #     cursor.execute("""SELECT num_prix_vente FROM ref_culture""")
+    #     self.VculturePrice = fetchall_column(cursor.fetchall())
+    #     print("Prix vente = ")
+    #     print(self.VculturePrice)
+    #     cursor.execute("""SELECT num_cout FROM ref_culture""")
+    #     self.VcultureProdPrice = fetchall_column(cursor.fetchall())
+    #     print("Cout = ")
+    #     print(self.VcultureProdPrice)
+    #     cursor.execute("""SELECT Rendement FROM ref_culture""")
+    #     self.VredementCulture = fetchall_column(cursor.fetchall())
+    #     print("Rendement = ")
+    #     print(self.VredementCulture)
+    #     cursor.execute("""SELECT Paille FROM ref_culture""")
+    #     self.VredementCulturePaille = fetchall_column(cursor.fetchall())
+    #     print("Paille = ")
+    #     print(self.VredementCulturePaille)
+    #     cursor.execute("""SELECT Ensilage FROM ref_culture""")
+    #     self.VredementCultureEnsilage = fetchall_column(cursor.fetchall())
+    #     print("Ensilage = ")
+    #     print(self.VredementCultureEnsilage)
+    #     cursor.execute("""SELECT Luzerne FROM ref_culture""")
+    #     self.VredementCultureLuzerne = fetchall_column(cursor.fetchall())
+    #     print("Luzerne = ")
+    #     print(self.VredementCultureLuzerne)
+    #     cursor.execute("""SELECT Ift FROM ref_culture""")
+    #     self.VcultureIft = fetchall_column(cursor.fetchall())
+    #     print("Ift = ")
+    #     print(self.VcultureIft)
+    #     cursor.execute("""SELECT * FROM lnk_ref_repartition_culture""")
+    #     rows = cursor.fetchall()
+    #     # TODO: Vérifier ça:
+    #     self.VparcelleCulture_N_1 = np.zeros(len(rows), dtype=int)
+    #     for row in rows:
+    #         id_culture = row['id_culture'] - 1
+    #         id_parcelle = row['id_parcelle'] - 1
+    #         self.VparcelleCulture_N_1[id_parcelle] = id_culture
+    #     print("VparcelleCulture_N_1 = ")
+    #     print(self.VparcelleCulture_N_1)
 
     def InitMenu(self):
         self.ui.Close_test.clicked.connect(ExitFunction)
@@ -161,9 +252,9 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         ConfCultureTable.setItem(1, 0, QTableWidgetItem("Rdt (t/ha)"))
         ConfCultureTable.setItem(2, 0, QTableWidgetItem("Prix de vente (€/t)"))
         ConfCultureTable.setItem(3, 0, QTableWidgetItem("Cout de production (€/t)"))
-        ConfCultureTable.setItem(4, 0, QTableWidgetItem("Rdt Paille (t/ha)"))
-        ConfCultureTable.setItem(5, 0, QTableWidgetItem("Rdt Ensilage (t/ha)"))
-        ConfCultureTable.setItem(6, 0, QTableWidgetItem("Rdt Luzerne (t/ha)"))
+        ConfCultureTable.setItem(4, 0, QTableWidgetItem("Paille (oui/non)"))
+        ConfCultureTable.setItem(5, 0, QTableWidgetItem("Ensilage (oui/non)"))
+        ConfCultureTable.setItem(6, 0, QTableWidgetItem("Luzerne (oui/non)"))
         ConfCultureTable.setItem(7, 0, QTableWidgetItem("IFT (/ha)"))
         for Culture in range(self.NbCulture):
             # Init Row with culture names
@@ -438,7 +529,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     # InitReportOutputTable: Init report table with header
     def InitReportOutputTable(self, OutReportTab):
         # Set Margin and constraint table
-        InitTable(OutReportTab, 4, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 2) * Const.RowSize + 2)
+        InitTable(OutReportTab, 5, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 2) * Const.RowSize + 2)
         # Fill Row header
         OutReportTab.setItem(0, 0, QTableWidgetItem("Marge"))
         OutReportTab.setItem(1, 0, QTableWidgetItem("Ift"))
@@ -457,12 +548,24 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
                 CultOutTab.setItem(Parcelle + 1, Year + 2,
                                    QTableWidgetItem(self.Vculture[index]))
             for i in range(5):
-                value = self.ModelOutput[IndexBestResult][0][Year][1][i]
-                MarginConstraintTable.setItem(i, Year + 2, QTableWidgetItem(str(value)))
+                value = str(round(self.ModelOutput[IndexBestResult][0][Year][1][i], 2))
+                MarginConstraintTable.setItem(i, Year + 2, QTableWidgetItem(value))
 
     # OnClick_StartCalculation: Method to start calculation.
     def OnClick_StartCalculation(self):
         self.WrapperModelInput()
+        self.solver.solve()
+        # Choix du mode de selection: 'MB' ou 'MCDA'
+        self.solver.resultSelection(selectionMode='MCDA', weightIFT=0.5, weightMB=0.5)
+        self.solver.assolement()
+
+        print(self.solver.dfMBSolution)
+        print(self.solver.dfIFTSolution)
+        print(self.solver.yearAssolementConfig)
+        print(self.solver.yearMB)
+        print(self.solver.yearQtePaille)
+        print(self.solver.yearQteEnsilage)
+
         self.ModelOutput = DummyCalculation(**self.ModelInput)
         self.FillOutputTable()
 
@@ -489,19 +592,19 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         # print(self.ModelInput["surface"])
 
         # Format numPailleMin
-        self.ModelInput["numPailleMin"] = self.QttPailleMin
-        # print("numPailleMin = ")
-        # print(self.ModelInput["numPailleMin"])
+        self.ModelInput["constraintPaille"] = self.QttPailleMin
+        # print("constraintPaille = ")
+        # print(self.ModelInput["constraintPaille"])
 
         # Format numEnsilageMin
-        self.ModelInput["numEnsilageMin"] = self.QttEnsilageMin
-        # print("numEnsilageMin = ")
-        # print(self.ModelInput["numEnsilageMin"])
+        self.ModelInput["constraintEnsilage"] = self.QttEnsilageMin
+        # print("constraintEnsilage = ")
+        # print(self.ModelInput["constraintEnsilage"])
 
         # Format numLuzerneMin
-        self.ModelInput["numLuzerneMin"] = self.QttLuzerneMin
-        # print("numLuzerneMin = ")
-        # print(self.ModelInput["numLuzerneMin"])
+        # TODO: décommenter cette ligne après intégration dans le modèle: self.ModelInput["constraintLuzerne"] = self.QttLuzerneMin
+        # print("constraintLuzerne = ")
+        # print(self.ModelInput["constraintLuzerne"])
 
         # Format numYear
         self.ModelInput["numYear"] = self.NbAnneeSimulee
@@ -514,7 +617,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         # print(self.ModelInput["numSolutionYear"])
 
         # Format number best results
-        self.ModelInput["numBestResult"] = self.NbBestResult
+        # TODO: décommenter cette ligne après intégration dans le modèle: self.ModelInput["numBestResult"] = self.NbBestResult
         # print("numBestResult = ")
         # print(self.ModelInput["numBestResult"])
 
@@ -534,24 +637,24 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         # print(self.ModelInput["coutProdCulture"])
 
         # Format rendement paille culture
-        self.ModelInput["etaPaille"] = self.VredementCulturePaille  # TODO: Name to be defined!!
+        # TODO: décommenter cette ligne après intégration dans le modèle: self.ModelInput["etaPaille"] = self.VredementCulturePaille  # TODO: Name to be defined!!
         # print("etaPaille = ")
         # print(self.ModelInput["etaPaille"])
 
         # Format rendement ensilage culture
-        self.ModelInput["etaEnsilage"] = self.VredementCultureEnsilage  # TODO: Name to be defined!!
+        # TODO: décommenter cette ligne après intégration dans le modèle: self.ModelInput["etaEnsilage"] = self.VredementCultureEnsilage  # TODO: Name to be defined!!
         # print("etaEnsilage = ")
         # print(self.ModelInput["etaEnsilage"])
 
         # Format rendement luzerne culture
-        self.ModelInput["etaLuzerne"] = self.VredementCultureLuzerne  # TODO: Name to be defined!!
+        # TODO: décommenter cette ligne après intégration dans le modèle: self.ModelInput["etaLuzerne"] = self.VredementCultureLuzerne  # TODO: Name to be defined!!
         # print("etaLuzerne = ")
         # print(self.ModelInput["etaLuzerne"])
 
         # Format IFT culture
-        self.ModelInput["IftCulture"] = self.VcultureIft  # TODO: Name to be defined!!
-        # print("IftCulture = ")
-        # print(self.ModelInput["IftCulture"])
+        self.ModelInput["ift"] = self.VcultureIft
+        # print("ift = ")
+        # print(self.ModelInput["ift"])
 
         # Format impact of sol on culture
         self.ModelInput["R1"] = self.VcultureSol
@@ -560,8 +663,30 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
         # Format culture rotation n-1
         self.ModelInput["R2"] = self.VRotationN_1
-        # print("R2 = ")
-        # print(self.ModelInput["R2"])
+        print("R2 = ")
+        print(self.ModelInput["R2"])
+
+        # Format culture rotation n-1
+        self.ModelInput["solverMode"] = 'constrained IFT'
+        # print("solverMode = ")
+        # print(self.ModelInput["solverMode"])
+
+        # Format culture rotation n-1
+        self.ModelInput["kIFT"] = 0
+        # print("kIFT = ")
+        # print(self.ModelInput["kIFT"])
+
+        # Format culture rotation n-1
+        self.ModelInput["cultureList"] = self.Vculture
+        # print("cultureList = ")
+        # print(self.ModelInput["cultureList"])
+
+        # Format culture rotation n-1
+        self.ModelInput["parcelleList"] = self.Vparcelle
+        # print("parcelleList = ")
+        # print(self.ModelInput["parcelleList"])
+
+        self.solver.__init__(**self.ModelInput)
 
 
 if __name__ == "__main__":
