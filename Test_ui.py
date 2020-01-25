@@ -3,6 +3,7 @@ import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QTableWidgetItem
 import sqlite3 as sql
+import time
 
 # Initialisation of variables to be used in case that there is no file to open.
 from DefaultVariables import DefaultInit as DefaultVariablesInit, Const
@@ -553,21 +554,21 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
     # OnClick_StartCalculation: Method to start calculation.
     def OnClick_StartCalculation(self):
+        start_time_2 = time.clock()
         self.WrapperModelInput()
+        print(time.clock() - start_time_2)
         self.solver.solve()
+        print(time.clock() - start_time_2)
         # Choix du mode de selection: 'MB' ou 'MCDA'
         self.solver.resultSelection(selectionMode='MCDA', weightIFT=0.5, weightMB=0.5)
         self.solver.assolement()
+        print(time.clock() - start_time_2)
 
-        print(self.solver.dfMBSolution)
-        print(self.solver.dfIFTSolution)
-        print(self.solver.yearAssolementConfig)
-        print(self.solver.yearMB)
-        print(self.solver.yearQtePaille)
-        print(self.solver.yearQteEnsilage)
+        self.WrapperModelOutput()
 
-        self.ModelOutput = DummyCalculation(**self.ModelInput)
+        # self.ModelOutput = DummyCalculation(**self.ModelInput)
         self.FillOutputTable()
+        print(time.clock() - start_time_2)
 
     def WrapperModelInput(self):
         # Format MPCn1
@@ -663,8 +664,8 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
         # Format culture rotation n-1
         self.ModelInput["R2"] = self.VRotationN_1
-        print("R2 = ")
-        print(self.ModelInput["R2"])
+        # print("R2 = ")
+        # print(self.ModelInput["R2"])
 
         # Format culture rotation n-1
         self.ModelInput["solverMode"] = 'constrained IFT'
@@ -687,6 +688,48 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         # print(self.ModelInput["parcelleList"])
 
         self.solver.__init__(**self.ModelInput)
+
+    def WrapperModelOutput(self):
+        self.ModelOutput = []
+        for Result in range(self.NbBestResult):
+            result_n_year = []
+            TotalMb = 0
+            TotalIft = 0
+            TotalQtePaille = 0
+            TotalQteEnsilage = 0
+            TotalQteLuzerne = 0
+            for Year in range(self.NbAnneeSimulee):
+                result_1_year_assol = np.zeros(self.NbParcelle)
+                for Parcelle in range(self.NbParcelle):
+                    for Culture in range(self.NbCulture):
+                        if self.solver.yearAssolementConfig[Year][Parcelle][Culture] == 1:
+                            result_1_year_assol[Parcelle] = Culture
+                result_1_year_other = np.array([self.solver.yearMB[Year],
+                                                self.solver.yearIFT[Year],
+                                                self.solver.yearQtePaille[Year],
+                                                self.solver.yearQteEnsilage[Year],
+                                                0])
+                TotalMb += self.solver.yearMB[Year]
+                TotalIft += self.solver.yearIFT[Year]
+                TotalQtePaille += self.solver.yearQtePaille[Year]
+                TotalQteEnsilage += self.solver.yearQteEnsilage[Year]
+                TotalQteLuzerne += 0
+                result_1_year = [result_1_year_assol, result_1_year_other]
+                result_n_year.append(result_1_year)
+            AverageMb = TotalMb / self.NbAnneeSimulee
+            AverageIft = TotalIft / self.NbAnneeSimulee
+            AverageQtePaille = TotalQtePaille / self.NbAnneeSimulee
+            AverageQteEnsilage = TotalQteEnsilage / self.NbAnneeSimulee
+            AverageQteLuzerne = TotalQteLuzerne / self.NbAnneeSimulee
+            result_n_year_other_average = np.array([AverageMb,
+                                                    AverageIft,
+                                                    AverageQtePaille,
+                                                    AverageQteEnsilage,
+                                                    AverageQteLuzerne])
+            result_n_year_with_average = [result_n_year, result_n_year_other_average]
+
+            self.ModelOutput.append(result_n_year_with_average)
+            # print(self.ModelOutput[Result])
 
 
 if __name__ == "__main__":
