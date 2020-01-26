@@ -13,21 +13,21 @@ Const.VparcelleTypeSol_Init = np.array([0, 0, 0, 3, 3, 3])
 Const.NbParcelleTypeSol_Init = len(Const.VparcelleTypeSol_Init)
 assert Const.NbParcelleTypeSol_Init == Const.NbParcelle_Init
 
-Const.Vculture_Init = ['Soja', 'Blé de force', 'Orge', 'Maïs', 'Tournesol']
+Const.Vculture_Init = ['Soja', 'Blé de force', 'Orge', 'Maïs', 'Tournesol', 'Luzerne']
 Const.NbCulture_Init = len(Const.Vculture_Init)
-Const.VredementCulture_Init = np.array([4, 8, 7, 13, 3.4])
+Const.VredementCulture_Init = np.array([4, 8, 7, 13, 3.4, 8])
 assert len(Const.VredementCulture_Init) == Const.NbCulture_Init
-Const.VculturePrice_Init = np.array([350, 200, 150, 150, 400])
+Const.VculturePrice_Init = np.array([350, 200, 150, 150, 400, 0])
 assert len(Const.VculturePrice_Init) == Const.NbCulture_Init
-Const.VcultureProdPrice_Init = np.array([400, 600, 400, 1200, 300])
+Const.VcultureProdPrice_Init = np.array([400, 600, 400, 1200, 300, 0])
 assert len(Const.VcultureProdPrice_Init) == Const.NbCulture_Init
-Const.VredementCulturePaille_Init = np.array([0, 1, 1, 0, 0])
+Const.VredementCulturePaille_Init = np.array([0, 1, 1, 0, 0, 0])
 assert len(Const.VredementCulturePaille_Init) == Const.NbCulture_Init
-Const.VredementCultureEnsilage_Init = np.array([0, 0, 0, 1, 0])
+Const.VredementCultureEnsilage_Init = np.array([0, 0, 0, 1, 0, 0])
 assert len(Const.VredementCulturePaille_Init) == Const.NbCulture_Init
-Const.VredementCultureLuzerne_Init = np.array([0, 0, 0, 0, 0])
+Const.VredementCultureLuzerne_Init = np.array([0, 0, 0, 0, 0, 1])
 assert len(Const.VredementCultureLuzerne_Init) == Const.NbCulture_Init
-Const.VcultureIft_Init = np.array([0.7, 2.3, 1.6, 1.1, 1.7])
+Const.VcultureIft_Init = np.array([0.7, 2.3, 1.6, 1.1, 1.7, 0.0])
 assert len(Const.VcultureIft_Init) == Const.NbCulture_Init
 
 Const.Vtypesol_Init = ['Coteaux', 'Plaines argilo-calcaires', 'Plaines boulbènes', 'Plaines irrigués']
@@ -37,15 +37,17 @@ Const.VcultureSol_Init = np.array([[50, 15, 30, 5],
                                    [15, 15, 25, 5],
                                    [15, 15, 25, 5],
                                    [25, 10, 25, 5],
-                                   [15, 10, 25, 5]])
+                                   [15, 10, 25, 5],
+                                   [0,  10, 10, 10]])
 assert len(Const.VcultureSol_Init) == Const.NbCulture_Init
 assert len(Const.VcultureSol_Init[0]) == Const.NbTypeSol_Init
 
-Const.VRotationN_1_Init = np.array([[50,  100, 100, 95,  95],
-                                    [100, 30,  70,  100, 100],
-                                    [100, 50,  50,  100, 100],
-                                    [100, 80,  80,  80,  80],
-                                    [100, 95,  95,  95,  95]])
+Const.VRotationN_1_Init = np.array([[50,  100, 100, 95,  95,  100],
+                                    [100, 30,  70,  100, 100, 100],
+                                    [100, 50,  50,  100, 100, 100],
+                                    [100, 80,  80,  80,  80,  100],
+                                    [100, 95,  95,  95,  50,  100],
+                                    [100, 120, 120, 100, 100, 100]])
 assert len(Const.VRotationN_1_Init) == Const.NbCulture_Init
 assert len(Const.VRotationN_1_Init[0]) == Const.NbCulture_Init
 
