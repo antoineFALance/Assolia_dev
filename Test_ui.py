@@ -1,9 +1,11 @@
+import datetime
+import sqlite3 as sql
+import time
 from sys import argv as sys_arg, exit as sys_exit
+
 import numpy as np
 from PyQt5 import QtWidgets, QtCore
 from PyQt5.QtWidgets import QTableWidgetItem, QFileDialog, QWidget
-import sqlite3 as sql
-import time
 
 # Initialisation of variables to be used in case that there is no file to open.
 from DefaultVariables import DefaultInit as DefaultVariablesInit, Const
@@ -14,6 +16,8 @@ Const.ColumnSize = 90
 Const.MyApp = QtWidgets.QApplication(sys_arg)
 Const.DI = DefaultVariablesInit()
 Const.Verbose = False
+
+Const.Version = "V030"
 
 
 def DebugFctnBreakPoint():
@@ -91,14 +95,18 @@ def GetIndexFromId(Vid, Id):
 
 class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     def __init__(self, parent=None):
-        from QtUi_test.test import Ui_MainWindow_test
+        from QtUi_test.test import Ui_Assolia_MainWindow
         assert isinstance(parent, object)
         super().__init__(parent)
         # QtWidgets.QMainWindow().__init__(self)
-        self.ui = Ui_MainWindow_test()
+        self.ui = Ui_Assolia_MainWindow()
         self.ui.setupUi(self)
 
         # Default data loading
+        self.Vusers = []
+        self.VusersId = []
+        self.NbUsers = 0
+
         self.Vparcelle = Const.DI.Vparcelle_Init
         self.VparcelleId = []
         self.NbParcelle = Const.DI.NbParcelle_Init
@@ -134,25 +142,43 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         self.NbAnneeSimulee = Const.DI.NbAnneeSimulee_Init
         self.NbBestResult = Const.DI.NbBestResult_Init
 
-        self.VparcelleCulture_N_1 = Const.DI.VparcelleCulture_N_1_Init
+        self.ActualYear = int(datetime.datetime.today().strftime('%Y'))
+        self.VparcelleCulture_N_X = [Const.DI.VparcelleCulture_N_1_Init]
+        self.VanneeCultureParcelle = [1]
+        self.NbAnneeCultureParcelle = len(self.VanneeCultureParcelle)
+
+        self.NbAnneeLuzerne = Const.DI.NbAnneeLuzerne_Init
+
+        self.WeightIFT = Const.DI.WeightIFT_Init
+        self.WeightMB = Const.DI.WeightMB_Init
+
+        self.solverMode = 'constrained IFT'
+        self.kIFT = 0.0
 
         self.ConfigParameterTab = self.ui.tabWidget.widget(2)
 
         # start with empty dictionary for the input of the model
         self.ModelInput = {}
+        self.WrapperModelInput()
         self.solver = A_solver.objectSolver(**self.ModelInput)
         self.ModelOutput = []
 
-        self.UserName = "Default"
+        self.ActualUserName = "Default"
+        self.ActualUserId = 1
 
         self.db = sql.connect('Assolia_Default.db')
         self.LoadDataBase()
 
+        self.FirstInit = True
         self.InitMenu()
         self.InitAllTab()
+        self.FirstInit = False
 
     def Debug_PrintVariables(self):
         try:
+            print("users  = ")
+            print(self.Vusers)
+            print(self.NbUsers)
             print("type sol = ")
             print(self.Vtypesol)
             print(self.NbTypeSol)
@@ -180,8 +206,8 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             print(self.VredementCultureLuzerne)
             print("Ift = ")
             print(self.VcultureIft)
-            print("VparcelleCulture_N_1 = ")
-            print(self.VparcelleCulture_N_1)
+            print("VparcelleCulture_N_X = ")
+            print(self.VparcelleCulture_N_X)
             print("VcultureSol = ")
             print(self.VcultureSol)
             print("VRotationN_1 = ")
@@ -204,8 +230,8 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             print(self.ModelInput["constraintPaille"])
             print("constraintEnsilage = ")
             print(self.ModelInput["constraintEnsilage"])
-            # print("constraintLuzerne = ")
-            # print(self.ModelInput["constraintLuzerne"])
+            print("constraintLuzerne = ")
+            print(self.ModelInput["constraintLuzerne"])
             print("numYear = ")
             print(self.ModelInput["numYear"])
             print("numSolutionYear = ")
@@ -259,6 +285,38 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             DebugFctnBreakPoint()
             return False
 
+    def SuspendAllConnections(self, bloqued=True):
+        # Menu
+        self.ui.Close_test.blockSignals(bloqued)
+        self.ui.actionParametre_administrateur.blockSignals(bloqued)
+        self.ui.actionOuvrir.blockSignals(bloqued)
+        # TODO: décommenter ceci pour autoriser la sauvegarde dans un fichier.
+        # self.ui.actionEnregistrer.blockSignals(bloqued)
+        self.ui.actionExit.blockSignals(bloqued)
+        self.ui.StartCalculation.blockSignals(bloqued)
+
+        # ConfigTab
+        self.ui.ConfigCultureTypeTable.blockSignals(bloqued)
+        self.ui.ConfigSolTypeTable.blockSignals(bloqued)
+        self.ui.NbSimuPerYearBox.blockSignals(bloqued)
+        self.ui.NbYearSimulationBox.blockSignals(bloqued)
+        self.ui.NbBestResultBox.blockSignals(bloqued)
+        self.ui.NbYearLuzerneBox.blockSignals(bloqued)
+        self.ui.ConfigOptiMbIft_Slider.blockSignals(bloqued)
+
+        # HiddenConfigTab
+        self.ui.ConfigCultureSolTable.blockSignals(bloqued)
+        self.ui.ConfigRotationCultureN_1Table.blockSignals(bloqued)
+
+        # InputTab
+        self.ui.ParcelCultureInputTable.blockSignals(bloqued)
+        self.ui.QttPailleMinBox.blockSignals(bloqued)
+        self.ui.QttEnsilageMinBox.blockSignals(bloqued)
+        self.ui.QttLuzerneMinBox.blockSignals(bloqued)
+        self.ui.UserNameComboBox.blockSignals(bloqued)
+        self.ui.ValindInput.blockSignals(bloqued)
+        self.ui.IndexBestResultBox.blockSignals(bloqued)
+
     def LoadDataBase(self):
         try:
             start_time_2 = time.clock()
@@ -270,75 +328,105 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             self.db.row_factory = sql.Row
             cursor = self.db.cursor()
 
-            cursor.execute("""SELECT lb_type_sol FROM ref_type_sol""")
+            # Get ref users
+            cursor.execute("SELECT lb_users FROM ref_users")
+            self.Vusers = fetchall_column(cursor.fetchall())
+            self.NbUsers = len(self.Vusers)
+
+            cursor.execute("SELECT id_users FROM ref_users")
+            self.VusersId = fetchall_column(cursor.fetchall())
+
+            # Get ref Type sol
+            cursor.execute("SELECT lb_type_sol FROM ref_type_sol")
             self.Vtypesol = fetchall_column(cursor.fetchall())
             self.NbTypeSol = len(self.Vtypesol)
 
-            cursor.execute("""SELECT id_type_sol FROM ref_type_sol""")
+            cursor.execute("SELECT id_type_sol FROM ref_type_sol")
             self.VtypesolId = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT lb_parcelle FROM ref_parcelle""")
+            # Get parcels name
+            cursor.execute("SELECT lb_parcelle FROM ref_parcelle WHERE id_users = ?", (self.ActualUserId,))
             self.Vparcelle = fetchall_column(cursor.fetchall())
             self.NbParcelle = len(self.Vparcelle)
 
-            cursor.execute("""SELECT id_parcelle FROM ref_parcelle""")
+            cursor.execute("SELECT id_parcelle FROM ref_parcelle WHERE id_users = ?", (self.ActualUserId,))
             self.VparcelleId = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT id_type_sol FROM ref_parcelle""")
-            self.VparcelleTypeSolId = fetchall_column(cursor.fetchall())
+            cursor.execute("SELECT id_type_sol FROM ref_parcelle WHERE id_users = ?", (self.ActualUserId,))
+            VparcelleTypeSolId = fetchall_column(cursor.fetchall())
+            self.VparcelleTypeSol = np.zeros(self.NbParcelle, dtype=int)
             for i in range(self.NbParcelle):
-                self.VparcelleTypeSol[i] = GetIndexFromId(self.VtypesolId, self.VparcelleTypeSolId[i])
+                self.VparcelleTypeSol[i] = GetIndexFromId(self.VtypesolId, VparcelleTypeSolId[i])
 
-            cursor.execute("""SELECT num_surface FROM ref_parcelle""")
+            cursor.execute("SELECT num_surface FROM ref_parcelle WHERE id_users = ?", (self.ActualUserId,))
             self.VparcelleTaille = np.array(fetchall_column(cursor.fetchall()))
             # TODO: demander pourquoi sans le np.array ça pose problème à la ligne 418 de Assolia_Solver.py
 
-            cursor.execute("""SELECT lb_culture FROM ref_culture""")
+            # Get cultures
+            cursor.execute("SELECT lb_culture FROM ref_culture")
             self.Vculture = fetchall_column(cursor.fetchall())
             self.NbCulture = len(self.Vculture)
 
-            cursor.execute("""SELECT id_culture FROM ref_culture""")
+            cursor.execute("SELECT id_culture FROM ref_culture")
             self.VcultureId = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT num_prix_vente FROM ref_culture""")
+            cursor.execute("SELECT num_prix_vente FROM ref_culture")
             self.VculturePrice = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT num_cout FROM ref_culture""")
+            cursor.execute("SELECT num_cout FROM ref_culture")
             self.VcultureProdPrice = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT Rendement FROM ref_culture""")
+            cursor.execute("SELECT Rendement FROM ref_culture")
             self.VredementCulture = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT Paille FROM ref_culture""")
+            cursor.execute("SELECT Paille FROM ref_culture")
             self.VredementCulturePaille = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT Ensilage FROM ref_culture""")
+            cursor.execute("SELECT Ensilage FROM ref_culture")
             self.VredementCultureEnsilage = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT Luzerne FROM ref_culture""")
+            cursor.execute("SELECT Luzerne FROM ref_culture")
             self.VredementCultureLuzerne = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT Ift FROM ref_culture""")
+            cursor.execute("SELECT Ift FROM ref_culture")
             self.VcultureIft = fetchall_column(cursor.fetchall())
 
-            cursor.execute("""SELECT * FROM lnk_ref_repartition_culture""")
+            # Get repartition culture
+            cursor.execute("SELECT * FROM lnk_ref_repartition_culture WHERE id_users = ?", (self.ActualUserId,))
             rows = cursor.fetchall()
-            self.VparcelleCulture_N_1 = np.zeros(len(rows), dtype=int)
+            self.VanneeCultureParcelle = []
+            for row in rows:
+                N_X = self.ActualYear - int(row['date_repartition'])
+                Already = False
+                for Already_N_X in self.VanneeCultureParcelle:
+                    if Already_N_X == N_X:
+                        Already = True
+                if not Already:
+                    self.VanneeCultureParcelle.append(N_X)
+            self.NbAnneeCultureParcelle = len(self.VanneeCultureParcelle)
+
+            self.VparcelleCulture_N_X = np.zeros((self.NbAnneeCultureParcelle, self.NbParcelle), dtype=int)
             for row in rows:
                 index_culture = GetIndexFromId(self.VcultureId, row['id_culture'])
                 index_parcelle = GetIndexFromId(self.VparcelleId, row['id_parcelle'])
-                self.VparcelleCulture_N_1[index_parcelle] = index_culture
+                annee = int(row['date_repartition'])
+                self.VparcelleCulture_N_X[
+                    GetIndexFromId(self.VanneeCultureParcelle, self.ActualYear - annee)][
+                    index_parcelle] \
+                    = index_culture
 
-            cursor.execute("""SELECT * FROM lnk_ref_rendement_culture_sol""")
+            # Get rendement culture sol
+            cursor.execute("SELECT * FROM lnk_ref_rendement_culture_sol")
             rows = cursor.fetchall()
             self.VcultureSol = np.zeros((self.NbCulture, self.NbTypeSol))
             for row in rows:
                 index_culture = GetIndexFromId(self.VcultureId, row['id_culture'])
-                index_type_sol = GetIndexFromId(self.VparcelleId, row['id_type_sol'])
+                index_type_sol = GetIndexFromId(self.VtypesolId, row['id_type_sol'])
                 num_rendement = row['num_rendement']
                 self.VcultureSol[index_culture][index_type_sol] = num_rendement
 
-            cursor.execute("""SELECT * FROM lnk_ref_rotation_culture_n_1""")
+            # Get rotation culture n-1
+            cursor.execute("SELECT * FROM lnk_ref_rotation_culture_n_1")
             rows = cursor.fetchall()
             self.VRotationN_1 = np.zeros((self.NbCulture, self.NbCulture))
             for row in rows:
@@ -346,6 +434,19 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
                 index_culture_n = GetIndexFromId(self.VcultureId, row['id_culture_n'])
                 num_rotation_ratio = row['num_rotation_ration']
                 self.VRotationN_1[index_culture_n][index_culture_n_1] = num_rotation_ratio
+
+            # Get user config
+            cursor.execute("SELECT * FROM ref_conf WHERE id_users = ?", (self.ActualUserId,))
+            rows = cursor.fetchall()
+            row = rows[0]
+            self.QttPailleMin = row['num_qtt_paille_min']
+            self.QttEnsilageMin = row['num_qtt_ensilage_min']
+            self.QttLuzerneMin = row['num_qtt_luzerne_min']
+            self.NbAnneeSimulee = row['num_nb_annee_simu']
+            self.NbSimuPerYear = row['num_nb_simu_par_an']
+            self.NbBestResult = row['num_nb_resultats_finaux']
+            self.NbBestResult = 1
+            self.NbAnneeLuzerne = row['num_nb_annee_luzerne']
 
             if Const.Verbose:
                 self.Debug_PrintVariables()
@@ -367,47 +468,47 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
             for index in range(self.NbTypeSol):
                 cursor.execute("UPDATE ref_type_sol SET lb_type_sol = ? WHERE id_type_sol = ?",
-                               (self.Vtypesol[index], str(self.VtypesolId[index]), ))
+                               (self.Vtypesol[index], str(self.VtypesolId[index]),))
             # cursor.execute("UPDATE ref_type_sol SET lb_type_sol = ?", (self.Vtypesol, ))
 
             for index in range(self.NbParcelle):
                 cursor.execute("UPDATE ref_parcelle SET lb_parcelle = ? WHERE id_parcelle = ?",
-                               (self.Vparcelle[index], str(self.VparcelleId[index]), ))
+                               (self.Vparcelle[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_parcelle SET id_type_sol = ? WHERE id_parcelle = ?",
-                               (self.VtypesolId[self.VparcelleTypeSol[index]], str(self.VparcelleId[index]), ))
+                               (self.VtypesolId[self.VparcelleTypeSol[index]], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_parcelle SET num_surface = ? WHERE id_parcelle = ?",
-                               (self.VparcelleTaille[index], str(self.VparcelleId[index]), ))
+                               (self.VparcelleTaille[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE lnk_ref_repartition_culture SET id_culture = ? WHERE id_parcelle = ?",
-                               (self.VcultureId[self.VparcelleCulture_N_1[index]], str(self.VparcelleId[index]), ))
+                               (self.VcultureId[self.VparcelleCulture_N_X[0][index]], str(self.VparcelleId[index]),))
 
             for index in range(self.NbCulture):
                 cursor.execute("UPDATE ref_culture SET lb_culture = ? WHERE id_culture = ?",
-                               (self.Vculture[index], str(self.VparcelleId[index]), ))
+                               (self.Vculture[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_culture SET num_prix_vente = ? WHERE id_culture = ?",
-                               (self.VculturePrice[index], str(self.VparcelleId[index]), ))
+                               (self.VculturePrice[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_culture SET num_cout = ? WHERE id_culture = ?",
-                               (self.VcultureProdPrice[index], str(self.VparcelleId[index]), ))
+                               (self.VcultureProdPrice[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_culture SET Rendement = ? WHERE id_culture = ?",
-                               (self.VredementCulture[index], str(self.VparcelleId[index]), ))
+                               (self.VredementCulture[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_culture SET Paille = ? WHERE id_culture = ?",
-                               (self.VredementCulturePaille[index], str(self.VparcelleId[index]), ))
+                               (self.VredementCulturePaille[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_culture SET Ensilage = ? WHERE id_culture = ?",
-                               (self.VredementCultureEnsilage[index], str(self.VparcelleId[index]), ))
+                               (self.VredementCultureEnsilage[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_culture SET Luzerne = ? WHERE id_culture = ?",
-                               (self.VredementCultureLuzerne[index], str(self.VparcelleId[index]), ))
+                               (self.VredementCultureLuzerne[index], str(self.VparcelleId[index]),))
                 cursor.execute("UPDATE ref_culture SET Ift = ? WHERE id_culture = ?",
-                               (self.VcultureIft[index], str(self.VparcelleId[index]), ))
+                               (self.VcultureIft[index], str(self.VparcelleId[index]),))
                 for index_sol in range(self.NbTypeSol):
                     cursor.execute("UPDATE lnk_ref_rendement_culture_sol SET num_rendement = ? "
                                    "WHERE id_culture = ? AND id_type_sol = ?",
                                    (self.VcultureSol[index][index_sol],
-                                    str(self.VcultureId[index]), str(self.VtypesolId[index_sol]), ))
+                                    str(self.VcultureId[index]), str(self.VtypesolId[index_sol]),))
 
                 for index_n_1 in range(self.NbCulture):
                     cursor.execute("UPDATE lnk_ref_rotation_culture_n_1 SET num_rotation_ration = ? "
                                    "WHERE id_culture_n = ? AND id_culture_n_1 = ?",
                                    (self.VRotationN_1[index][index_n_1],
-                                    str(self.VcultureId[index]), str(self.VcultureId[index_n_1]), ))
+                                    str(self.VcultureId[index]), str(self.VcultureId[index_n_1]),))
 
             self.db.commit()
             print("Saved")
@@ -453,8 +554,11 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             if fileName:
                 self.db.close()
                 self.db = sql.connect(fileName[0])
+
                 self.LoadDataBase()
+                self.SuspendAllConnections(True)
                 self.InitAllTab()
+                self.SuspendAllConnections(False)
             return True
 
         except:
@@ -527,12 +631,15 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             self.ui.NbYearSimulationBox.setValue(self.NbAnneeSimulee)
             self.ui.NbSimuPerYearBox.setValue(self.NbSimuPerYear)
             self.ui.NbBestResultBox.setValue(self.NbBestResult)
+            self.ui.NbYearLuzerneBox.setValue(self.NbAnneeLuzerne)
             # On change:
             ConfCultureTable.itemChanged.connect(self.OnChange_ConfCultureTable)
             ConfTypeSolTable.itemChanged.connect(self.OnChange_ConfTypeSolTable)
-            self.ui.NbSimuPerYearBox.valueChanged.connect(self.OnChange_NbSimuPerYearBox)
             self.ui.NbYearSimulationBox.valueChanged.connect(self.OnChange_NbYearSimulationBox)
+            self.ui.NbSimuPerYearBox.valueChanged.connect(self.OnChange_NbSimuPerYearBox)
             self.ui.NbBestResultBox.valueChanged.connect(self.OnChange_NbBestResultBox)
+            self.ui.NbYearLuzerneBox.valueChanged.connect(self.OnChange_NbYearLuzerneBox)
+            self.ui.ConfigOptiMbIft_Slider.valueChanged.connect(self.OnChange_ConfigOptiMbIft_Slider)
             return True
 
         except:
@@ -615,7 +722,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         try:
             self.NbAnneeSimulee = self.ui.NbYearSimulationBox.value()
             self.InitCultureOutputTable(self.ui.OutputCultureTable)
-            self.InitReportOutputTable(self.ui.tableMarginConstraint)
+            self.InitReportOutputTable(self.ui.tableMarginConstraint, self.ui.tableMeanPerYear)
             return True
 
         except:
@@ -627,6 +734,42 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         try:
             self.NbBestResult = self.ui.NbBestResultBox.value()
             self.ui.IndexBestResultBox.setMaximum(self.NbBestResult - 1)
+            return True
+
+        except:
+            DebugFctnBreakPoint()
+            return False
+
+    # OnChange_NbYearLuzerneBox: Method called on change event in NbYearLuzerneBox
+    def OnChange_NbYearLuzerneBox(self):
+        try:
+            self.NbAnneeLuzerne = self.ui.NbYearLuzerneBox.value()
+            return True
+
+        except:
+            DebugFctnBreakPoint()
+            return False
+
+    # OnChange_ConfigOptiMbIft_Slider: Method called on change event in ConfigOptiMbIft_Slider
+    def OnChange_ConfigOptiMbIft_Slider(self):
+        try:
+            ConfigOptiMbIft = self.ui.ConfigOptiMbIft_Slider.value()
+            if ConfigOptiMbIft == 0:
+                self.WeightIFT = 0.0
+                self.WeightMB = 1.0 - self.WeightIFT
+                self.solverMode = 'unconstrained IFT'
+                self.kIFT = 0.0
+            elif ConfigOptiMbIft == 1:
+                self.WeightIFT = 0.5
+                self.WeightMB = 1.0 - self.WeightIFT
+                self.solverMode = 'constrained IFT'
+                self.kIFT = 0.0
+            elif ConfigOptiMbIft == 2:
+                self.WeightIFT = 0.5
+                self.WeightMB = 1.0 - self.WeightIFT
+                self.solverMode = 'constrained decreasing IFT'
+                self.kIFT = 0.01
+
             return True
 
         except:
@@ -720,29 +863,46 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     # InitInputTab: Init tables in tab "Entrées"
     def InitInputTab(self):
         try:
+            # Init user selection
+            if self.FirstInit:
+                self.ui.UserNameComboBox.addItems(self.Vusers)
+            else:
+                self.SuspendAllConnections(True)
+                self.ui.UserNameComboBox.clear()
+                self.ui.UserNameComboBox.addItems(self.Vusers)
+                self.ui.UserNameComboBox.setCurrentIndex(GetIndexFromId(self.VusersId, self.ActualUserId))
+                self.SuspendAllConnections(False)
+
             # Init parcelle culture input table
             InTable = self.ui.ParcelCultureInputTable
-            InitTable(InTable, self.NbParcelle + 1, 4, 0, 25)
+            InTable.clear()
+            InitTable(InTable, self.NbParcelle + 1, self.NbAnneeCultureParcelle + 3, 0, 25)
             # Fill Header
             InTable.setItem(0, 0, QTableWidgetItem("Parcelle"))
-            InTable.setItem(0, 1, QTableWidgetItem("Culture n-1"))
-            InTable.setItem(0, 2, QTableWidgetItem("Taille Parcelle"))
-            InTable.setItem(0, 3, QTableWidgetItem("Type Sol"))
+            for Annee in range(self.NbAnneeCultureParcelle):
+                InTable.setItem(0, self.NbAnneeCultureParcelle - Annee,
+                                QTableWidgetItem("Culture n-" + str(self.VanneeCultureParcelle[Annee])))
+            InTable.setItem(0, self.NbAnneeCultureParcelle + 1, QTableWidgetItem("Taille Parcelle (ha)"))
+            InTable.setItem(0, self.NbAnneeCultureParcelle + 2, QTableWidgetItem("Type Sol"))
 
             for Parcelle in range(self.NbParcelle):
                 # Fill Row Header with parcel names
                 InTable.setItem(Parcelle + 1, 0, QTableWidgetItem(self.Vparcelle[Parcelle]))
                 # Fill first column with input of n-1 year
                 # Create list box selection for culture, based on what is in config tab
-                comboCulture = QtWidgets.QComboBox()
-                comboCulture.addItems(self.Vculture)
-                InTable.setCellWidget(Parcelle + 1, 1, comboCulture)
-                InTable.cellWidget(Parcelle + 1, 1).setCurrentIndex(self.VparcelleCulture_N_1[Parcelle])
-                InTable.setItem(Parcelle + 1, 2, QTableWidgetItem(str(self.VparcelleTaille[Parcelle])))
+                for Annee in range(self.NbAnneeCultureParcelle):
+                    comboCulture = QtWidgets.QComboBox()
+                    comboCulture.addItems(self.Vculture)
+                    InTable.setCellWidget(Parcelle + 1, self.NbAnneeCultureParcelle - Annee, comboCulture)
+                    InTable.cellWidget(Parcelle + 1, self.NbAnneeCultureParcelle - Annee). \
+                        setCurrentIndex(self.VparcelleCulture_N_X[Annee][Parcelle])
+                InTable.setItem(Parcelle + 1,
+                                self.NbAnneeCultureParcelle + 1, QTableWidgetItem(str(self.VparcelleTaille[Parcelle])))
                 comboTypeSol = QtWidgets.QComboBox()
                 comboTypeSol.addItems(self.Vtypesol)
-                InTable.setCellWidget(Parcelle + 1, 3, comboTypeSol)
-                InTable.cellWidget(Parcelle + 1, 3).setCurrentIndex(self.VparcelleTypeSol[Parcelle])
+                InTable.setCellWidget(Parcelle + 1, self.NbAnneeCultureParcelle + 2, comboTypeSol)
+                InTable.cellWidget(Parcelle + 1,
+                                   self.NbAnneeCultureParcelle + 2).setCurrentIndex(self.VparcelleTypeSol[Parcelle])
 
             # Init Qtt min
             self.ui.QttPailleMinBox.setValue(self.QttPailleMin)
@@ -753,7 +913,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             self.ui.QttPailleMinBox.valueChanged.connect(self.OnChange_QttPailleMinBox)
             self.ui.QttEnsilageMinBox.valueChanged.connect(self.OnChange_QttEnsilageMinBox)
             self.ui.QttLuzerneMinBox.valueChanged.connect(self.OnChange_QttLuzerneMinBox)
-            self.ui.UserNameTab.itemChanged.connect(self.OnChange_UserNameTab)
+            self.ui.UserNameComboBox.currentTextChanged.connect(self.OnChange_UserNameComboBox)
             # On clicks:
             self.ui.ValindInput.clicked.connect(self.OnClick_ValidInput)
             return True
@@ -768,13 +928,15 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             InTable = self.ui.ParcelCultureInputTable
             # Update Input n-1
             for Row in range(self.NbParcelle):
-                # Get VparcelleCulture_N_1 value
-                self.VparcelleCulture_N_1[Row] = InTable.cellWidget(Row + 1, 1).currentIndex()
+                # Get VparcelleCulture_N_X value
+                for Year in range(self.NbAnneeCultureParcelle):
+                    self.VparcelleCulture_N_X[Year][Row] = \
+                        InTable.cellWidget(Row + 1, self.NbAnneeCultureParcelle - Year).currentIndex()
                 # Get VparcelleTypeSol value
-                self.VparcelleTypeSol[Row] = InTable.cellWidget(Row + 1, 3).currentIndex()
-                # Set VparcelleCulture_N_1 in OutputTable
+                self.VparcelleTypeSol[Row] = InTable.cellWidget(Row + 1, self.NbAnneeCultureParcelle + 2).currentIndex()
+                # Set VparcelleCulture_N_X in OutputTable
                 OCT = self.ui.OutputCultureTable
-                OCT.setItem(Row + 1, 1, QTableWidgetItem(self.Vculture[self.VparcelleCulture_N_1[Row]]))
+                OCT.setItem(Row + 1, 1, QTableWidgetItem(self.Vculture[self.VparcelleCulture_N_X[0][Row]]))
             return True
 
         except:
@@ -835,16 +997,13 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             return False
 
     # OnChange_UserNameTab: Method called on change event in UserNameTab
-    def OnChange_UserNameTab(self):
+    def OnChange_UserNameComboBox(self):
         try:
-            row = self.ui.UserNameTab.currentRow()
-            col = self.ui.UserNameTab.currentColumn()
-            if (row == 0) and (col == 1):
-                self.UserName = self.ui.UserNameTab.item(row, col).text()
-            elif (row == 0) and (col == 0):
-                self.ui.UserNameTab.setItem(0, 1, QTableWidgetItem("Nom d'utilisateur:"))
-            else:
-                return False
+            Index = self.ui.UserNameComboBox.currentIndex()
+            self.ActualUserName = self.Vusers[Index]
+            self.ActualUserId = self.VusersId[Index]
+            self.LoadDataBase()
+            self.InitAllTab()
             return True
 
         except:
@@ -855,7 +1014,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     def InitOutputTab(self):
         try:
             self.InitCultureOutputTable(self.ui.OutputCultureTable)
-            self.InitReportOutputTable(self.ui.tableMarginConstraint)
+            self.InitReportOutputTable(self.ui.tableMarginConstraint, self.ui.tableMeanPerYear)
             self.ui.IndexBestResultBox.setMaximum(self.NbBestResult - 1)
             self.ui.IndexBestResultBox.valueChanged.connect(self.FillOutputTable)
             return True
@@ -881,7 +1040,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
                 CultOutTab.setItem(Parcelle + 1, 0, QTableWidgetItem(self.Vparcelle[Parcelle]))
                 # Fill first column with input of n-1 year
                 CultOutTab.setItem(Parcelle + 1, 1,
-                                   QTableWidgetItem(self.Vculture[self.VparcelleCulture_N_1[Parcelle]]))
+                                   QTableWidgetItem(self.Vculture[self.VparcelleCulture_N_X[0][Parcelle]]))
             return True
 
         except:
@@ -889,7 +1048,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             return False
 
     # InitReportOutputTable: Init report table with header
-    def InitReportOutputTable(self, OutReportTab):
+    def InitReportOutputTable(self, OutReportTab, OutMeanPerYearTab):
         try:
             # Set Margin and constraint table
             InitTable(OutReportTab, 5, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 2) * Const.RowSize + 2)
@@ -899,6 +1058,9 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             OutReportTab.setItem(2, 0, QTableWidgetItem("Qtt paille"))
             OutReportTab.setItem(3, 0, QTableWidgetItem("Qtt ensilage"))
             OutReportTab.setItem(4, 0, QTableWidgetItem("Qtt luzerne"))
+            InitTable(OutMeanPerYearTab, 6, 1, (self.NbAnneeSimulee + 2) * Const.ColumnSize + 2,
+                      (self.NbParcelle + 1) * Const.RowSize + 2)
+            OutMeanPerYearTab.setItem(0, 0, QTableWidgetItem("Moyenne/an"))
             return True
 
         except:
@@ -909,15 +1071,24 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     def FillOutputTable(self):
         CultOutTab = self.ui.OutputCultureTable
         MarginConstraintTable = self.ui.tableMarginConstraint
+        MeanPerYearTable = self.ui.tableMeanPerYear
         IndexBestResult = self.ui.IndexBestResultBox.value()
         for Year in range(self.NbAnneeSimulee):
             for Parcelle in range(self.NbParcelle):
                 index = int(self.ModelOutput[IndexBestResult][0][Year][0][Parcelle])
-                CultOutTab.setItem(Parcelle + 1, Year + 2,
+                if index != -1:
+                    CultOutTab.setItem(Parcelle + 1, Year + 2,
                                    QTableWidgetItem(self.Vculture[index]))
+                else:
+                    CultOutTab.setItem(Parcelle + 1, Year + 2,
+                                       QTableWidgetItem("-"))
             for i in range(5):
                 value = str(round(self.ModelOutput[IndexBestResult][0][Year][1][i], 2))
                 MarginConstraintTable.setItem(i, Year + 2, QTableWidgetItem(value))
+
+        for i in range(5):
+                value = str(round(self.ModelOutput[IndexBestResult][1][i], 2))
+                MeanPerYearTable.setItem(0, i + 1, QTableWidgetItem(value))
 
     # OnClick_StartCalculation: Method to start calculation.
     def OnClick_StartCalculation(self):
@@ -928,13 +1099,17 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         print(time.clock() - start_time_2)
 
         if Status:
+            self.solver.__init__(**self.ModelInput)
             Status = self.solver.solve()
         print(time.clock() - start_time_2)
 
         # Choix du mode de selection: 'MB' ou 'MCDA'
         if Status:
-            Status = self.solver.resultSelection(selectionMode='MCDA', weightIFT=0.5, weightMB=0.5)
-        # if Status != False:
+            maxProgressBarIter = (1 - self.NbSimuPerYear ** (self.NbAnneeSimulee + 1)) / (1 - self.NbSimuPerYear) - 1
+            self.ui.CalculationProgressBar.setMaximum(maxProgressBarIter)
+            Status = self.solver.resultSelection(selectionMode='MCDA', weightIFT=self.WeightIFT, weightMB=self.WeightMB)
+            self.ui.CalculationProgressBar.setValue(maxProgressBarIter)
+            # if Status != False:
             Status = self.solver.assolement()
         print(time.clock() - start_time_2)
 
@@ -953,7 +1128,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             # Format MPCn1
             MPCn1 = np.zeros((self.NbParcelle, self.NbCulture))
             for Parcelle in range(self.NbParcelle):
-                MPCn1[Parcelle][self.VparcelleCulture_N_1[Parcelle]] = 1
+                MPCn1[Parcelle][self.VparcelleCulture_N_X[0][Parcelle]] = 1
             self.ModelInput["MPCn1"] = MPCn1
 
             # Format MPTS
@@ -972,14 +1147,16 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             self.ModelInput["constraintEnsilage"] = self.QttEnsilageMin
 
             # Format numLuzerneMin
-            # TODO: décommenter cette ligne après intégration dans le modèle:
-            #  self.ModelInput["constraintLuzerne"] = self.QttLuzerneMin
+            self.ModelInput["constraintLuzerne"] = self.QttLuzerneMin
 
             # Format numYear
             self.ModelInput["numYear"] = self.NbAnneeSimulee
 
             # Format numSolutionYear
             self.ModelInput["numSolutionYear"] = self.NbSimuPerYear
+
+            # Format numSolutionYear
+            self.ModelInput["yearRollLuzerne"] = self.NbAnneeLuzerne
 
             # Format number best results
             # TODO: décommenter cette ligne après intégration dans le modèle:
@@ -1016,10 +1193,10 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             self.ModelInput["R2"] = self.VRotationN_1
 
             # Format
-            self.ModelInput["solverMode"] = 'constrained IFT'
+            self.ModelInput["solverMode"] = self.solverMode
 
             # Format
-            self.ModelInput["kIFT"] = 0.0
+            self.ModelInput["kIFT"] = self.kIFT
 
             # Format culture names
             # TODO: to be removed
@@ -1032,7 +1209,6 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             if Const.Verbose:
                 self.Debug_PrintDictionary()
 
-            self.solver.__init__(**self.ModelInput)
             return True
 
         except:
@@ -1052,19 +1228,23 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
                 for Year in range(self.NbAnneeSimulee):
                     result_1_year_assol = np.zeros(self.NbParcelle)
                     for Parcelle in range(self.NbParcelle):
+                        CultureNotFound = True
                         for Culture in range(self.NbCulture):
                             if self.solver.yearAssolementConfig[Year][Parcelle][Culture] == 1:
                                 result_1_year_assol[Parcelle] = Culture
+                                CultureNotFound = False
+                        if CultureNotFound:
+                            result_1_year_assol[Parcelle] = -1
                     result_1_year_other = np.array([self.solver.yearMB[Year],
                                                     self.solver.yearIFT[Year],
                                                     self.solver.yearQtePaille[Year],
                                                     self.solver.yearQteEnsilage[Year],
-                                                    0])
+                                                    self.solver.yearQteLuzerne[Year]])
                     TotalMb += self.solver.yearMB[Year]
                     TotalIft += self.solver.yearIFT[Year]
                     TotalQtePaille += self.solver.yearQtePaille[Year]
                     TotalQteEnsilage += self.solver.yearQteEnsilage[Year]
-                    TotalQteLuzerne += 0
+                    TotalQteLuzerne += self.solver.yearQteLuzerne[Year]
                     result_1_year = [result_1_year_assol, result_1_year_other]
                     result_n_year.append(result_1_year)
                 AverageMb = TotalMb / self.NbAnneeSimulee
@@ -1095,6 +1275,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 if __name__ == "__main__":
     # Instantiation du Main
     TestApp = TestWindow()
+    TestApp.setWindowTitle("Assolia " + Const.Version)
     TestApp.show()
 
     sys_exit(Const.MyApp.exec_())
