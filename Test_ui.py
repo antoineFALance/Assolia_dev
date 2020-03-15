@@ -17,7 +17,7 @@ Const.MyApp = QtWidgets.QApplication(sys_arg)
 Const.DI = DefaultVariablesInit()
 Const.Verbose = False
 
-Const.Version = "V021"
+Const.Version = "V030"
 
 
 def DebugFctnBreakPoint():
@@ -151,6 +151,9 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
         self.WeightIFT = Const.DI.WeightIFT_Init
         self.WeightMB = Const.DI.WeightMB_Init
+
+        self.solverMode = 'constrained IFT'
+        self.kIFT = 0.0
 
         self.ConfigParameterTab = self.ui.tabWidget.widget(2)
 
@@ -719,7 +722,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
         try:
             self.NbAnneeSimulee = self.ui.NbYearSimulationBox.value()
             self.InitCultureOutputTable(self.ui.OutputCultureTable)
-            self.InitReportOutputTable(self.ui.tableMarginConstraint)
+            self.InitReportOutputTable(self.ui.tableMarginConstraint, self.ui.tableMeanPerYear)
             return True
 
         except:
@@ -751,8 +754,21 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     def OnChange_ConfigOptiMbIft_Slider(self):
         try:
             ConfigOptiMbIft = self.ui.ConfigOptiMbIft_Slider.value()
-            self.WeightIFT = ConfigOptiMbIft / 2.0
-            self.WeightMB = 1.0 - (ConfigOptiMbIft / 2.0)
+            if ConfigOptiMbIft == 0:
+                self.WeightIFT = 0.0
+                self.WeightMB = 1.0 - self.WeightIFT
+                self.solverMode = 'unconstrained IFT'
+                self.kIFT = 0.0
+            elif ConfigOptiMbIft == 1:
+                self.WeightIFT = 0.5
+                self.WeightMB = 1.0 - self.WeightIFT
+                self.solverMode = 'constrained IFT'
+                self.kIFT = 0.0
+            elif ConfigOptiMbIft == 2:
+                self.WeightIFT = 0.5
+                self.WeightMB = 1.0 - self.WeightIFT
+                self.solverMode = 'constrained decreasing IFT'
+                self.kIFT = 0.01
 
             return True
 
@@ -866,7 +882,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             for Annee in range(self.NbAnneeCultureParcelle):
                 InTable.setItem(0, self.NbAnneeCultureParcelle - Annee,
                                 QTableWidgetItem("Culture n-" + str(self.VanneeCultureParcelle[Annee])))
-            InTable.setItem(0, self.NbAnneeCultureParcelle + 1, QTableWidgetItem("Taille Parcelle"))
+            InTable.setItem(0, self.NbAnneeCultureParcelle + 1, QTableWidgetItem("Taille Parcelle (ha)"))
             InTable.setItem(0, self.NbAnneeCultureParcelle + 2, QTableWidgetItem("Type Sol"))
 
             for Parcelle in range(self.NbParcelle):
@@ -998,7 +1014,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     def InitOutputTab(self):
         try:
             self.InitCultureOutputTable(self.ui.OutputCultureTable)
-            self.InitReportOutputTable(self.ui.tableMarginConstraint)
+            self.InitReportOutputTable(self.ui.tableMarginConstraint, self.ui.tableMeanPerYear)
             self.ui.IndexBestResultBox.setMaximum(self.NbBestResult - 1)
             self.ui.IndexBestResultBox.valueChanged.connect(self.FillOutputTable)
             return True
@@ -1032,7 +1048,7 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             return False
 
     # InitReportOutputTable: Init report table with header
-    def InitReportOutputTable(self, OutReportTab):
+    def InitReportOutputTable(self, OutReportTab, OutMeanPerYearTab):
         try:
             # Set Margin and constraint table
             InitTable(OutReportTab, 5, self.NbAnneeSimulee + 2, 0, (self.NbParcelle + 2) * Const.RowSize + 2)
@@ -1042,6 +1058,9 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             OutReportTab.setItem(2, 0, QTableWidgetItem("Qtt paille"))
             OutReportTab.setItem(3, 0, QTableWidgetItem("Qtt ensilage"))
             OutReportTab.setItem(4, 0, QTableWidgetItem("Qtt luzerne"))
+            InitTable(OutMeanPerYearTab, 6, 1, (self.NbAnneeSimulee + 2) * Const.ColumnSize + 2,
+                      (self.NbParcelle + 1) * Const.RowSize + 2)
+            OutMeanPerYearTab.setItem(0, 0, QTableWidgetItem("Moyenne/an"))
             return True
 
         except:
@@ -1052,15 +1071,24 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
     def FillOutputTable(self):
         CultOutTab = self.ui.OutputCultureTable
         MarginConstraintTable = self.ui.tableMarginConstraint
+        MeanPerYearTable = self.ui.tableMeanPerYear
         IndexBestResult = self.ui.IndexBestResultBox.value()
         for Year in range(self.NbAnneeSimulee):
             for Parcelle in range(self.NbParcelle):
                 index = int(self.ModelOutput[IndexBestResult][0][Year][0][Parcelle])
-                CultOutTab.setItem(Parcelle + 1, Year + 2,
+                if index != -1:
+                    CultOutTab.setItem(Parcelle + 1, Year + 2,
                                    QTableWidgetItem(self.Vculture[index]))
+                else:
+                    CultOutTab.setItem(Parcelle + 1, Year + 2,
+                                       QTableWidgetItem("-"))
             for i in range(5):
                 value = str(round(self.ModelOutput[IndexBestResult][0][Year][1][i], 2))
                 MarginConstraintTable.setItem(i, Year + 2, QTableWidgetItem(value))
+
+        for i in range(5):
+                value = str(round(self.ModelOutput[IndexBestResult][1][i], 2))
+                MeanPerYearTable.setItem(0, i + 1, QTableWidgetItem(value))
 
     # OnClick_StartCalculation: Method to start calculation.
     def OnClick_StartCalculation(self):
@@ -1077,8 +1105,10 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
 
         # Choix du mode de selection: 'MB' ou 'MCDA'
         if Status:
-            # TODO: Modify selection here from interface inputs
+            maxProgressBarIter = (1 - self.NbSimuPerYear ** (self.NbAnneeSimulee + 1)) / (1 - self.NbSimuPerYear) - 1
+            self.ui.CalculationProgressBar.setMaximum(maxProgressBarIter)
             Status = self.solver.resultSelection(selectionMode='MCDA', weightIFT=self.WeightIFT, weightMB=self.WeightMB)
+            self.ui.CalculationProgressBar.setValue(maxProgressBarIter)
             # if Status != False:
             Status = self.solver.assolement()
         print(time.clock() - start_time_2)
@@ -1163,10 +1193,10 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
             self.ModelInput["R2"] = self.VRotationN_1
 
             # Format
-            self.ModelInput["solverMode"] = 'constrained IFT'
+            self.ModelInput["solverMode"] = self.solverMode
 
             # Format
-            self.ModelInput["kIFT"] = 0.0
+            self.ModelInput["kIFT"] = self.kIFT
 
             # Format culture names
             # TODO: to be removed
@@ -1198,9 +1228,13 @@ class TestWindow(QtWidgets.QMainWindow, QtCore.QObject):
                 for Year in range(self.NbAnneeSimulee):
                     result_1_year_assol = np.zeros(self.NbParcelle)
                     for Parcelle in range(self.NbParcelle):
+                        CultureNotFound = True
                         for Culture in range(self.NbCulture):
                             if self.solver.yearAssolementConfig[Year][Parcelle][Culture] == 1:
                                 result_1_year_assol[Parcelle] = Culture
+                                CultureNotFound = False
+                        if CultureNotFound:
+                            result_1_year_assol[Parcelle] = -1
                     result_1_year_other = np.array([self.solver.yearMB[Year],
                                                     self.solver.yearIFT[Year],
                                                     self.solver.yearQtePaille[Year],

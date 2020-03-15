@@ -64,8 +64,8 @@ assert len(Const.VparcelleCulture_N_1_Init) == Const.NbParcelle_Init
 
 Const.NbAnneeLuzerne_Init = 4
 
-Const.WeightIFT_Init = 0.5
-Const.WeightMB_Init = 0.5
+Const.WeightIFT_Init = 1.0
+Const.WeightMB_Init = 0.0
 
 class DefaultInit:
     def __init__(self):
