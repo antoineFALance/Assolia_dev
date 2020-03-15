@@ -586,8 +586,9 @@ class objectSolver:
                         numConstraints = constMatrix.shape[0]
 
                         #8. Défintion des boundaries
-                        bound_sup=self.mainBoundaries(numConstraints=numConstraints,parcelleLuzIndex=parcelleLuzIndex,indexNumSolution=indexNumSolution,iftRepartition=iftRepartition)[1]
-                        bound_inf = self.mainBoundaries(numConstraints=numConstraints,parcelleLuzIndex=parcelleLuzIndex,indexNumSolution=indexNumSolution,iftRepartition=iftRepartition)[0]
+                        bnd=self.mainBoundaries(numConstraints=numConstraints,parcelleLuzIndex=parcelleLuzIndex,indexNumSolution=indexNumSolution,iftRepartition=iftRepartition)
+                        bound_sup = bnd[1]
+                        bound_inf = bnd[0]
 
                         if len(nullLuzParcelleFlag) != 0 and constMatrix.shape[1] == self.nbParcelle * self.nbCulture:
                             for bound in nullLuzParcelleFlag:
