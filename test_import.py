@@ -14,10 +14,10 @@ nbCulture = len(Vculture)
 iterCalcul=0
 numPailleMin = 145
 numEnsilageMin = 280
-numMinLuzerne= 0
+numMinLuzerne= 160
 yearRollLuzerne = 5
 numSolutionYear=3
-numYear=8
+numYear=6
 eta=np.array([4,8,7,13,3.4,8])
 ift=np.array([0.7,2.3,1.6,1.1,1.7,0])
 surface=np.array([10,10,10,20,20,20])
@@ -28,8 +28,8 @@ coutProdCulture=np.array([400,600,400,1200,300,0])
 # Définition des cultures précédentes
 # Année N-1
 MPCn1 = np.array(
-              [[1,0,0,0,0,0],
-               [0,1,0,0,0,0],
+              [[0,1,0,0,0,0],
+               [0,0,1,0,0,0],
                [0,0,0,0,1,0],
                [0,0,0,1,0,0],
                [1,0,0,0,0,0],
@@ -87,8 +87,8 @@ R2=np.array([[50,100,100,95,95,100],
 
 solver = A_solver.objectSolver(
 solverMode = 'unconstrained IFT',
-kIFT = 0.01,
-cultureList = Vculture,
+kIFT = 0.0,
+cultureList =Vculture,
 parcelleList = Vparcelle,
 constraintPaille = numPailleMin,
 constraintEnsilage = numEnsilageMin,
@@ -111,9 +111,8 @@ MPCN=[MPCn1,MPCn2,MPCn3,MPCn4])
 print(solver.solve())
 
 #Choix du mode de selection: 'MB' ou 'MCDA'
-solver.resultSelection(selectionMode='MCDA',weightIFT=0.5,weightMB=0.5)
+solver.resultSelection(selectionMode='MCDA',weightIFT=0,weightMB=1)
 solver.assolement()
-
 
 # print(solver.dfMBSolution)
 # print(solver.dfIFTSolution)

@@ -35,6 +35,7 @@ class objectSolver:
         self.solverMode = solverMode
         self.kIft = kIFT
         self.cultureList = cultureList
+        #self.cultureList=self.updateCultureList(cultureList=cultureList,boundDict={'Luzerne':constraintLuzerne})
         self.parcelleList = parcelleList
         self.nbParcelle = len(self.parcelleList)
         self.nbCulture = len(self.cultureList)
@@ -80,7 +81,10 @@ class objectSolver:
 
     def updateCultureList(self,cultureList,boundDict):
         culture=cultureList.copy()
-        map(lambda key: culture.remove(key) if boundDict[key]==0 else None ,boundDict)
+        #map(lambda key: culture.remove(key) if boundDict[key]==0 else None ,cultureList)
+        for key in boundDict:
+            if boundDict[key]==0:
+                culture.remove(key)
         return culture
 
     def updateVector(self,vector,boundDict,cultureList):
@@ -195,13 +199,24 @@ class objectSolver:
         if self.solverMode in ('constrained IFT', 'constrained decreasing IFT') and self.constraintLuzerne==0:
             constLuzerne=[1 if element>0 else 0 for element in constLuzerne]
 
+
+        ##TEST
+        if self.constraintLuzerne==0:
+            constLuzerne = [1 if element > 0 else 0 for element in constLuzerne]
+
+
         if self.constraintPaille==0:
             constPaille= [1 if element > 0 else 0 for element in constPaille]
 
-        constaintsMask = [True if infoFlag > 0 else False for infoFlag in
-                         [self.constraintPaille, self.constraintEnsilage, self.constraintLuzerne]]
 
-        if len(parcelleLuzIndex) != 0 or self.constraintLuzerne == 0:
+        if self.constraintEnsilage==0:
+            constEnsilage= [1 if element > 0 else 0 for element in constEnsilage]
+
+        #constaintsMask = [True if infoFlag > 0 else False for infoFlag in [self.constraintPaille, self.constraintEnsilage, self.constraintLuzerne]]
+        constaintsMask = [True,True,True]
+
+        #if len(parcelleLuzIndex) != 0 or self.constraintLuzerne == 0:
+        if len(parcelleLuzIndex) != 0:
              constaintsMask[2] = False
         defautConstraintsList = [constPaille, constEnsilage, constLuzerne]
         tempArray = np.array(defautConstraintsList)
@@ -220,6 +235,7 @@ class objectSolver:
         bound_Paille_sup, bound_Paille_inf = [], []
         bound_Ensilage_sup, bound_Ensilage_inf = [], []
         bound_Luzerne_sup, bound_Luzerne_inf = [], []
+        boundMask=[]
 
 
         #Bound lié à la répartition culture/parcelle
@@ -238,8 +254,10 @@ class objectSolver:
         bound_Luzerne_inf.append(self.constraintLuzerne)
         bound_Luzerne_sup.append(100 * self.constraintLuzerne)
 
-        boundMask = [True if infoFlag > 0 else False for infoFlag in [self.constraintPaille, self.constraintEnsilage, self.constraintLuzerne]]
-        if len(parcelleLuzIndex) != 0 or self.constraintLuzerne == 0:
+        #boundMask = [True if infoFlag > 0 else False for infoFlag in [self.constraintPaille, self.constraintEnsilage, self.constraintLuzerne]]
+        boundMask=[True,True,True]
+        #if len(parcelleLuzIndex) != 0 or self.constraintLuzerne == 0:
+        if len(parcelleLuzIndex) != 0 :
             boundMask[2] = False
 
         defautboundListSup = [bound_Paille_sup[0], bound_Ensilage_sup[0],  bound_Luzerne_sup[0]]
@@ -533,12 +551,12 @@ class objectSolver:
 
                         Mg = np.transpose(surface*np.transpose(eta_n1*(etap*eta_ts*Pv-Ct)))
 
+
                         if len(parcelleLuzIndex) != 0:
                             Mg = self.transformEta(swapMatrix=swapMatrix, eta=Mg,range_=range(len(parcelleLuzIndex)), cultureIndex=self.cultureList.index('Luzerne'))
 
                         # Coefficient pondération calcul Marge Brute
                         weight = [element for row in Mg for element in row]
-
 
                         # 7.Matrice des contraintes
                         weightDict={'Paille':weightPaille,'Ensilage':weightEnsilage,'Luzerne':weightLuzerne,'IFT':weightIFT}
@@ -612,6 +630,11 @@ class objectSolver:
                         solutionBound=optimisationResult['solutionBound']
                         solutionConstraintList=optimisationResult['solutionConstraintList']
                         solutionBoundList=optimisationResult['solutionBoundList']
+
+
+
+
+
                         indexNumSolution+=1
                         progressBarIter += 1
                         self.printProgressBar(total=maxProgressBarIter, iteration=progressBarIter,
