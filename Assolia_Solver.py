@@ -5,8 +5,6 @@ pd.set_option('display.max_rows', 50000)
 pd.set_option('display.max_columns', 50000)
 from ortools.linear_solver import pywraplp
 
-
-
 class objectSolver:
     def __init__(self,
                  solverMode='unconstrained IFT',
@@ -333,7 +331,7 @@ class objectSolver:
                      tempRepartition = np.vstack((np.array(tempList),tempRepartition))
                 repartition = np.matmul(swapMatrixInverse,tempRepartition)
 
-            solutionRepartition.append(repartition)
+            solutionRepartition.append(repartition.astype(int))
             marge_brute_optimale = solver.Objective().Value()
             solutionValue.append(marge_brute_optimale)
             iftValue.append(sum(np.matmul(repartition, self.ift) * self.surface) / sum(self.surface))
@@ -495,8 +493,9 @@ class objectSolver:
                         #0.1-Modification de la matrice de culture initiale
                         #a.Matrice SWAP
                         try:
-                            swapMatrix = self.swapMatrix(parcelleLuzIndex=parcelleLuzIndex)[0]
-                            swapMatrixInverse = self.swapMatrix(parcelleLuzIndex=parcelleLuzIndex)[1]
+                            swp= self.swapMatrix(parcelleLuzIndex=parcelleLuzIndex)
+                            swapMatrix = swp[0]
+                            swapMatrixInverse = swp[1]
                         except:
                             pass
 
@@ -662,8 +661,6 @@ class objectSolver:
                         self.printProgressBar(total=maxProgressBarIter, iteration=progressBarIter,
                                               prefix='Progress:', suffix='Complete', length=50)
 
-
-
             initRepartition = solutionRepartition
             yearSolutionRepartition.append(solutionRepartition)
             yearSolutionValue.append(solutionValue)
@@ -677,8 +674,9 @@ class objectSolver:
         self.yearIftSolutionValue = yearIftSolutionValue
 
         # Création de la matrice des résultats
-        colMatrix = self.lambdaLocal(yearSolutionValue=yearSolutionValue,yearIftSolutionValue=yearIftSolutionValue)['colMatrix']
-        iftTable = self.lambdaLocal(yearSolutionValue=yearSolutionValue,yearIftSolutionValue=yearIftSolutionValue)['iftTable']
+        result=self.lambdaLocal(yearSolutionValue=yearSolutionValue,yearIftSolutionValue=yearIftSolutionValue)
+        colMatrix = result['colMatrix']
+        iftTable = result['iftTable']
 
         matrixResult = np.transpose(colMatrix)
         matrixIFT = np.transpose(iftTable)
@@ -832,6 +830,3 @@ class objectSolver:
         # except Exception as Er:
         #     print(Er)
         #     return False
-
-
-
